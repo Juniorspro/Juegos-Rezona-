@@ -36,4 +36,7 @@ anterior · controles de dedo editables · 13 idiomas sin cartel + globito · po
 - Entrega: probar por file://, 0 pedidos afuera, 0 errores; `replace` con función; escapar `</script`.
 
 ## Estado del repo
-Vacío salvo guía/mapa. No existen `motor2d/`, `herramientas/`, ni juegos de ejemplo citados en la guía.
+No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la guía.
+- `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, ui, juego);
+  `node famatina/armar.mjs` → `famatina.html` (un archivo, ~250 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
+  `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

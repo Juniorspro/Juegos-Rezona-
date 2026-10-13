@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#160e1c">
+<title>FAMATINA</title>
+<style>
+html,body{margin:0;height:100%;background:#160e1c;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior:none}
+#lienzo{position:absolute;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;outline:none}
+#carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#f4c542;font:bold 22px monospace;letter-spacing:6px;background:#160e1c}
+#carga small{color:#a08870;font-size:12px;margin-top:14px;letter-spacing:1px;opacity:0;transition:opacity .6s;font-weight:normal}
+</style>
+</head>
+<body>
+<div id="carga">FAMATINA<small id="aviso">Si no carga, abrilo con Chrome o Safari.</small></div>
+<noscript><div style="position:absolute;inset:0;background:#160e1c;color:#f4c542;font:16px monospace;display:flex;align-items:center;justify-content:center">Este juego necesita JavaScript.</div></noscript>
+<canvas id="lienzo"></canvas>
+<script>setTimeout(function(){var a=document.getElementById('aviso');if(a)a.style.opacity=1},7000)</script>
+<!--JS-->
+</body>
+</html>
