@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1e3a2e">
+<title>CAMALOTE</title>
+<style>
+<!--CSS-->
+html,body{margin:0;height:100%;background:#1e3a2e;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior:none}
+#lienzo{position:absolute;left:0;top:0;touch-action:none;outline:none}
+#carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff4d8;font:700 32px Fredoka,'Trebuchet MS',sans-serif;letter-spacing:2px;background:radial-gradient(#3a6a4a,#1e3a2e);text-shadow:0 3px 0 #14281e}
+#carga small{color:#cfe8c8;font-size:13px;margin-top:14px;letter-spacing:0;opacity:0;transition:opacity .6s;font-weight:500;text-shadow:none}
+</style>
+</head>
+<body>
+<div id="carga">CAMALOTE<small id="aviso">Si no carga, abrilo con Chrome o Safari.</small></div>
+<noscript><div style="position:absolute;inset:0;background:#1e3a2e;color:#fff;font:18px sans-serif;display:flex;align-items:center;justify-content:center">Este juego necesita JavaScript.</div></noscript>
+<canvas id="lienzo"></canvas>
+<script>setTimeout(function(){var a=document.getElementById('aviso');if(a)a.style.opacity=1},7000)</script>
+<!--JS-->
+</body>
+</html>

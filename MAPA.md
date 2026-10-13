@@ -40,3 +40,7 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~250 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.
+- `camalote/`: aventura vista desde arriba (tipo Zelda) en vectorial, 3 capítulos con jefes, puzzles, diálogos y 9 figuritas.
+  Fuente en `js/` (base, idiomas 1-3, texto, arte, mapas, mundo, sonido, ui, juego); `node camalote/armar.mjs` →
+  `camalote.html` (~360 KB). Mapas, guiones, láminas y rutas del bot en `js/mapas.js`. Prueba: `?prueba` y
+  `window.__juego` (`bot` inmortal que sigue `RUTAS`, `capitulo(n)`, `simular(seg)`, `medirAudio`); `?portada`.
