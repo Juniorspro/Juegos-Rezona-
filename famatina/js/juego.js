@@ -6,7 +6,7 @@ const LENTA = { t: 0 };
 const TELON = { fase: 0, t: 0, alMedio: null };
 const E = { punteros: new Map(), clics: [] };
 const AVISOS = [], TOASTS = [], ERRORES = [];
-let lz = null, gp = null;
+let lz = null, gp = null, INTRO = null, MUS_INTRO = null;
 
 function nuevoG() {
   return {
@@ -154,6 +154,15 @@ function terminarCarrera() {
   revisarLogros(); guardar();
 }
 
+// ---------- intro de JXSTUDIOS (siempre) y pantalla de idioma ----------
+function empezarIntro() {
+  INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_FAMATINA });
+  Sonido.callar = true;
+  MUS_INTRO = Sonido.ok() ? IntroJXS.jingle(Sonido.ctx, Sonido.master, ESTILO_FAMATINA) : null;
+}
+function saltarIntro() { if (!INTRO) return; INTRO.saltar(); if (INTRO.listo && MUS_INTRO) MUS_INTRO.cortar(); }
+function elegirIdioma(cod) { cambiarIdioma(cod); irA('titulo'); }
+
 // ---------- escenas y telón ----------
 function irA(esc, alMedio) {
   if (TELON.fase) return false;
@@ -242,6 +251,7 @@ function prepararEntrada() {
   lz.addEventListener('wheel', e => { e.preventDefault(); if (puedeDesplazar()) { CAM.y += e.deltaY * 0.35; CAM.obj = null; CAM.vy = 0; } }, { passive: false });
   window.addEventListener('keydown', e => {
     Sonido.iniciar();
+    if (ESCENA === 'intro') { saltarIntro(); return; }
     if (e.key === 'Escape') { if (CONF) CONF = null; else if (PANEL) { if (PANEL.tipo !== 'diario' && PANEL.tipo !== 'bienvenida' && PANEL.tipo !== 'fiebreFin') cerrarPanel(); } else if (ESCENA === 'mina') abrirPanel('opciones'); }
     if (puedeDesplazar()) { if (e.key === 'ArrowDown' || e.key === 'PageDown') CAM.obj = clamp(CAM.y + (e.key === 'PageDown' ? H * 0.8 : 44), 0, camMax(MC())); if (e.key === 'ArrowUp' || e.key === 'PageUp') CAM.obj = clamp(CAM.y - (e.key === 'PageUp' ? H * 0.8 : 44), 0, camMax(MC())); if (e.key === 'Home') CAM.obj = 0; if (e.key === 'End') CAM.obj = camMax(MC()); }
   });
@@ -276,7 +286,7 @@ function resolverClics() {
   E.clics.length = 0;
 }
 function moverCamara(dt) {
-  if (ESCENA === 'titulo') { CAM.y = lerp(CAM.y, Math.min(0, SUELO - H * 0.56), 1 - Math.exp(-6 * dt)); return; }
+  if (ESCENA === 'titulo' || ESCENA === 'idioma' || ESCENA === 'intro') { CAM.y = lerp(CAM.y, Math.min(0, SUELO - H * 0.56), 1 - Math.exp(-6 * dt)); return; }
   const mx = camMax(MC());
   let arrastrando = false;
   for (const p of E.punteros.values()) if (p.arr && p.scroll) arrastrando = true;
@@ -294,13 +304,14 @@ function redimensionar() {
   const iw = window.innerWidth, ih = window.innerHeight, pw = iw * DPR, ph = ih * DPR;
   ESC = Math.max(1, Math.floor(Math.min(pw / 216, ph / 300)));
   W = clamp(Math.floor(pw / ESC), 160, 960); H = clamp(Math.floor(ph / ESC), 240, 960);
-  RES = Math.min(ESC, 6);
+  RES = Math.min(ESC, 4);   // más de 4 no se ve y en un celu de 1080 px pintaba 2,5 millones de píxeles por cuadro
   lz.width = W * RES; lz.height = H * RES;
   const cw = W * ESC / DPR, ch = H * ESC / DPR;
   lz.style.width = cw + 'px'; lz.style.height = ch + 'px';
   lz.style.left = Math.floor((iw - cw) / 2) + 'px'; lz.style.top = Math.floor((ih - ch) / 2) + 'px';
   gp = lz.getContext('2d');
   prepararMundo(); REJA = null; _mapa = null;
+  if (ESCENA === 'intro' && INTRO && !INTRO.listo) { const t = INTRO.t; INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_FAMATINA }); INTRO.t = t; }
   if (MA) CAM.y = clamp(CAM.y, 0, camMax(MC()));
 }
 
@@ -311,6 +322,11 @@ function actualizar(dt) {
   if (TELON.fase === 1) { TELON.t += dt / 0.3; if (TELON.t >= 1) { TELON.t = 1; TELON.fase = 2; const f = TELON.alMedio; TELON.alMedio = null; if (f) f(); } }
   else if (TELON.fase === 2) { TELON.t -= dt / 0.3; if (TELON.t <= 0) { TELON.t = 0; TELON.fase = 0; } }
   if (PANEL) PANEL.t += dt;
+  if (ESCENA === 'intro') {
+    INTRO.pasar(dt);
+    if (INTRO.listo && !TELON.fase) { Sonido.callar = false; irA('idioma'); }
+    return;
+  }
   let dts = dt;
   if (LENTA.t > 0) { LENTA.t -= dt; dts *= 0.35; }
   simular(dts * TURBO);
@@ -330,9 +346,11 @@ function dibujar() {
   ZONAS = [];
   g.setTransform(RES, 0, 0, RES, 0, 0);
   g.imageSmoothingEnabled = false;
+  if (ESCENA === 'intro' && INTRO) { INTRO.dibujar(g); zona(0, 0, W, H, saltarIntro); dibujarTelon(g); resolverClics(); ZONAS_PREV = ZONAS; return; }
   dibujarMundo(m, T);
   componerMundo(g, ZURDO);
   if (ESCENA === 'titulo') escenaTitulo(g);
+  else if (ESCENA === 'idioma') escenaIdioma(g);
   else {
     uiMundo(g, m);
     hudSuperior(g, m);
@@ -402,6 +420,7 @@ function iniciar() {
   if (c) c.remove();
   if (PARAM.has('portada')) { G.desfase = 0.765 * 480 - G.reloj; MA.ev.condor = { t: 4.6, dur: 12, dir: 1, y: 0.15 }; MA.ev.tC = 1e9; }
   if (PARAM.has('directo')) { ESCENA = 'mina'; alEntrarMina(); }
+  else if (!PARAM.has('portada') && (!PRUEBA || PARAM.has('intro'))) { ESCENA = 'intro'; empezarIntro(); }
   requestAnimationFrame(cuadro);
 }
 
@@ -412,7 +431,7 @@ window.__juego = {
   get W() { return W; }, get H() { return H; }, get cam() { return CAM.y; }, set cam(v) { CAM.y = v; CAM.obj = null; CAM.vy = 0; },
   paso(dt, dib) { actualizar(dt); if (dib !== false) dibujar(); },
   simular(seg, conBot) { const b = BOT, tb = TURBO; BOT = conBot !== false; TURBO = 2; let s = seg; while (s > 0) { const k = Math.min(1, s); simular(k); pasoParticulas(k); s -= k; } FLOT.length = 0; BANNERS.length = 0; BOT = b; TURBO = tb; },
-  escenaA(e) { ESCENA = e; if (e === 'mina') alEntrarMina(); }, abrir(t, d) { abrirPanel(t, d); }, cerrar() { PANEL = null; CONF = null; AVISOS.length = 0; },
+  escenaA(e) { ESCENA = e; if (e === 'intro') empezarIntro(); if (e === 'mina') alEntrarMina(); }, get intro() { return INTRO && { t: INTRO.t, listo: INTRO.listo }; }, abrir(t, d) { abrirPanel(t, d); }, cerrar() { PANEL = null; CONF = null; AVISOS.length = 0; },
   idioma(c) { cambiarIdioma(c); }, mina(k) { cambiarMina(k); }, fase(f) { G.desfase = f * 480 - G.reloj; },
   carrera0() { const des = desafioDelDia(hoy()); parDelDia(des); CARRERA = nuevaCarrera(des); CARRERA.mina.on = ganchos(CARRERA.mina); ESCENA = 'carrera'; CAM.y = 0; },
   terminarCarrera() { if (CARRERA) { CARRERA.t = CARRERA.dur; terminarCarrera(); } }, dibujar() { dibujar(); }, tr,

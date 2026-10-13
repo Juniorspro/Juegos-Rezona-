@@ -736,11 +736,30 @@ function rect(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Mat
 function lin(g, x0, y0, x1, y1, c) {
   g.fillStyle = c;
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+  // derecha o parada: los mismos píxeles en un solo rectángulo
+  if (x0 === x1 || y0 === y1) {
+    const ax = Math.round(x0), ay = Math.round(y0), m = Math.floor(n), bx = Math.round(x0 + (x1 - x0) * m / n), by = Math.round(y0 + (y1 - y0) * m / n);
+    g.fillRect(Math.min(ax, bx), Math.min(ay, by), Math.abs(bx - ax) + 1, Math.abs(by - ay) + 1);
+    return;
+  }
   for (let i = 0; i <= n; i++) g.fillRect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1);
 }
+// el disco se pinta una vez por radio y color y se estampa (los botones redondos eran ~700 rectángulos por cuadro)
+const _disco = new Map();
 function disco(g, cx, cy, r, c) {
-  g.fillStyle = c;
-  for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); }
+  if (r !== Math.round(r) || r < 0) {
+    g.fillStyle = c;
+    for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); }
+    return;
+  }
+  const k = c + '|' + r;
+  let s = _disco.get(k);
+  if (!s) {
+    s = lienzo(r * 2 + 1, r * 2 + 1); const h = s.getContext('2d'); h.fillStyle = c;
+    for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); h.fillRect(r - w, r + y, w * 2 + 1, 1); }
+    _disco.set(k, s);
+  }
+  g.drawImage(s, Math.round(cx) - r, Math.round(cy) - r);
 }
 function spr(filas, pal) {
   const h = filas.length, w = filas[0].length, c = lienzo(w, h), g = c.getContext('2d'), img = g.createImageData(w, h), d = img.data;
@@ -978,7 +997,7 @@ function capasMontes(m) {
 // ---------- luces ----------
 const _luz = new Map();
 function spriteLuz(col, r) {
-  r = Math.max(2, Math.round(r));
+  r = r > 12 ? Math.round(r / 3) * 3 : Math.max(2, Math.round(r));   // en escalones: la luz que crece no arma un lienzo por cuadro
   const key = col + r;
   let c = _luz.get(key);
   if (c) return c;
@@ -1756,7 +1775,10 @@ const Sonido = {
     this.mus = c.createGain(); this.mus.gain.value = 0; this.mus.connect(this.master);
     this.ef = c.createGain(); this.ef.gain.value = 0; this.ef.connect(this.master);
     const len = Math.floor(c.sampleRate * 2.6), ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    // la caída se calcula cada 64 muestras y se interpola (Math.pow por muestra trababa el primer toque)
+    const env = new Float32Array((len >> 6) + 2);
+    for (let j = 0; j < env.length; j++) env[j] = Math.pow(Math.max(0, 1 - j * 64 / len), 3.2);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) { const j = i >> 6, e = env[j] + (env[j + 1] - env[j]) * (i & 63) / 64; d[i] = (Math.random() * 2 - 1) * e; } }
     this.rev = c.createConvolver(); this.rev.buffer = ir;
     const wet = c.createGain(); wet.gain.value = 0.28; this.rev.connect(wet); wet.connect(this.master);
     this.envioRev = c.createGain(); this.envioRev.gain.value = 1; this.envioRev.connect(this.rev);
@@ -1766,6 +1788,24 @@ const Sonido = {
     this.volumen(this.vMus, this.vEf);
     this.prox = c.currentTime + 0.3;
     this.sonando = true;
+    this.precalentar();
+  },
+  // las cuerdas del charango de la mina se arman de a poco fuera del cuadro (armarlas al sonar el acorde trababa)
+  precalentar() {
+    const ctx = this.ctx, mina = this.mina, fs = [];
+    if (!ctx) return;
+    for (const [gr, tipo] of [[0, 'm'], [3, 'M'], [-2, 'M'], [-5, 'm']]) {
+      const raiz = this.raiz() * Math.pow(2, gr / 12) / 2;
+      for (const a of tipo === 'm' ? [0, 7, 12, 15, 19] : [0, 7, 12, 16, 19]) fs.push(raiz * 2 * Math.pow(2, a / 12));
+      fs.push(raiz);
+    }
+    const tanda = () => {
+      if (this.ctx !== ctx || this.mina !== mina) return;
+      const t0 = performance.now();
+      while (fs.length && performance.now() - t0 < 4) this.bufKS(fs.shift());
+      if (fs.length) setTimeout(tanda, 0);
+    };
+    setTimeout(tanda, 0);
   },
   volumen(m, e) {
     this.vMus = m; this.vEf = e;
@@ -1910,9 +1950,9 @@ const Sonido = {
     }
     return notas;
   },
-  musicaMina(k) { if (this.mina !== k) { this.mina = k; this.ks.clear(); this.frase = null; } },
+  musicaMina(k) { if (this.mina !== k) { this.mina = k; this.ks.clear(); this.frase = null; this.precalentar(); } },
   tic() {
-    if (!this.sonando || !this.ok()) return;
+    if (!this.sonando || !this.ok() || this.callar) return;
     const c = this.ctx, M = MINAS[this.mina].mus, sem = 60 / M.bpm / 4;   // semicorchea
     if (this.prox < c.currentTime - 0.2) this.prox = c.currentTime + 0.05;
     const prog = [[0, 'm'], [3, 'M'], [-2, 'M'], [0, 'm'], [0, 'm'], [3, 'M'], [-5, 'm'], [0, 'm']];
@@ -1937,7 +1977,7 @@ const Sonido = {
   },
 };
 let VIBRAR = true;
-function vibrar(ms) { if (VIBRAR && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
+function vibrar(ms) { if (!VIBRAR || !navigator.vibrate || (navigator.userActivation && !navigator.userActivation.hasBeenActive)) return; try { navigator.vibrate(ms); } catch (e) { } }
 
 // FAMATINA — el mundo: cielo, superficie, la mina por dentro, luces y partículas (todo a la resolución del juego)
 const CAM = { y: 0, vy: 0, obj: null };
@@ -1978,14 +2018,17 @@ function explosionEn(x, y, col) {
 }
 let LUCES_EXTRA = [];
 function pasoParticulas(dt) {
-  for (let i = PART.length - 1; i >= 0; i--) {
+  let vivas = 0;   // se compacta en una pasada (splice dentro del bucle era cuadrático en las explosiones)
+  for (let i = 0; i < PART.length; i++) {
     const p = PART[i];
     p.vida -= dt;
-    if (p.vida <= 0) { PART.splice(i, 1); continue; }
+    if (p.vida <= 0) continue;
     p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
     if (p.t === 'humo' || p.t === 'polvo') { p.vx *= 1 - dt * 0.8; }
     if (p.suelo != null && p.y > p.suelo) { p.y = p.suelo; p.vy *= -0.3; p.vx *= 0.5; }
+    PART[vivas++] = p;
   }
+  PART.length = vivas;
   for (let i = LUCES_EXTRA.length - 1; i >= 0; i--) { LUCES_EXTRA[i].vida -= dt; if (LUCES_EXTRA[i].vida <= 0) LUCES_EXTRA.splice(i, 1); }
   if (SAC.t > 0) SAC.t -= dt;
 }
@@ -2269,12 +2312,12 @@ function dibujarMundo(m, t) {
   for (const l of LUCES) {
     if (l.y < -40 || l.y > H + 40) continue;
     if (l.cono) L.drawImage(spriteCono(l.c, l.r, l.cono), l.cono > 0 ? Math.round(l.x) : Math.round(l.x - l.r * 2), Math.round(l.y - l.r / 2));
-    else { const r = Math.round(l.r); L.drawImage(spriteLuz(l.c, r), Math.round(l.x - r), Math.round(l.y - r)); }
+    else { const s = spriteLuz(l.c, l.r); L.drawImage(s, Math.round(l.x - s.width / 2), Math.round(l.y - s.height / 2)); }
   }
   g.globalCompositeOperation = 'multiply';
   g.drawImage(luzCv, 0, 0);
   g.globalCompositeOperation = 'lighter';
-  if (CALIDAD !== 'baja') for (const b of BRILLOS) { if (b.y < -30 || b.y > H + 30) continue; g.globalAlpha = clamp(b.a == null ? 0.6 : b.a, 0, 1); const r = Math.round(b.r); g.drawImage(spriteLuz(b.c, r), Math.round(b.x - r), Math.round(b.y - r)); }
+  if (CALIDAD !== 'baja') for (const b of BRILLOS) { if (b.y < -30 || b.y > H + 30) continue; g.globalAlpha = clamp(b.a == null ? 0.6 : b.a, 0, 1); const s = spriteLuz(b.c, b.r); g.drawImage(s, Math.round(b.x - s.width / 2), Math.round(b.y - s.height / 2)); }
   g.globalAlpha = 1;
   g.globalCompositeOperation = 'source-over';
   dibujarParticulas(g, cam, true);
@@ -2293,6 +2336,253 @@ function componerMundo(g, zurdo) {
   g.drawImage(mundoCv, sx, sy - fr);
   g.restore();
 }
+
+// comun/intro-jxs.js — LA intro de JXSTUDIOS para todos los juegos (la de La Cripta/TAJO que mandó el dueño).
+// Rápida (2,1 s): una raya de luz abre el fondo, el monograma JXS se escribe con chispas en las puntas,
+// golpe (destello, sacudida, chispazo, vibración), una franja de brillo lo cruza, "JXSTUDIOS" se tipea y
+// abajo "presenta". Un toque la salta (después de 0,35 s). Después va la pantalla de idioma.
+// Cada juego la viste a su estilo con `estilo` (la misma coreografía, otro material):
+//   metal [8 colores], filo, bisel, borde, sombra {dx,dy,col}     monograma de píxeles (juegos de píxeles)
+//   logo(g, i)                                                     monograma a mano (juegos lisos)
+//   fondo(W, H, cx, cy) → lienzo, negro, puntas, golpe, destello, chispa, anchoLogo(W, H)
+//   letras(g, parte, I, t, y), presentaTxt(g, txt, I, t, y)        el texto, con la letra del juego (obligatorio)
+//   antes(g, t, I) / despues(g, t, I), dibujarChispa(g, c), jingle(ctx, bus, t0, tg, h)
+const IntroJXS = (() => {
+  const CAJA = { w: 350, h: 172 }, GROSOR = 14.5;
+  // el monograma: cuatro trazos (A va abajo en el cruce: se dibuja primero)
+  const TRAZOS = [
+    { id: 'A', capa: 0, d: [['M', 40, 19], ['L', 114, 19], ['L', 176, 101], ['C', 194, 128, 222, 168, 268, 169], ['C', 310, 170, 342, 152, 342, 122]] },
+    { id: 'J', capa: 0, d: [['M', 40, 43], ['L', 98, 43], ['L', 98, 116], ['C', 98, 148, 44, 158, 36, 124]] },
+    { id: 'S', capa: 0, d: [['M', 312, 66], ['C', 306, 46, 288, 36, 266, 36], ['C', 242, 36, 226, 48, 226, 63], ['C', 226, 80, 248, 86, 272, 92], ['C', 302, 99, 320, 108, 320, 126], ['C', 320, 142, 300, 148, 272, 148], ['C', 246, 148, 226, 138, 216, 118]] },
+    { id: 'B', capa: 1, d: [['M', 10, 130], ['C', 18, 158, 50, 168, 86, 166], ['C', 108, 165, 122, 158, 134, 142], ['L', 200, 46], ['C', 216, 24, 244, 12, 272, 12], ['C', 310, 12, 340, 30, 340, 62]] },
+  ];
+  const lim = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const salida = t => 1 - Math.pow(1 - t, 3);
+  const salidaAtras = t => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2);
+  function camino2d(t, esc, ox, oy) {
+    const p = new Path2D();
+    for (const [op, ...n] of t.d) {
+      const q = n.map((v, i) => (i % 2 ? oy + v * esc : ox + v * esc));
+      if (op === 'M') p.moveTo(q[0], q[1]); else if (op === 'L') p.lineTo(q[0], q[1]); else p.bezierCurveTo(q[0], q[1], q[2], q[3], q[4], q[5]);
+    }
+    return p;
+  }
+  function muestrear(t, cada) {
+    const pts = [];
+    let x = 0, y = 0;
+    for (const [op, ...n] of t.d) {
+      if (op === 'M') { x = n[0]; y = n[1]; pts.push([x, y]); continue; }
+      if (op === 'L') { const [x1, y1] = n, k = Math.max(1, Math.ceil(Math.hypot(x1 - x, y1 - y) / cada)); for (let i = 1; i <= k; i++) pts.push([x + (x1 - x) * i / k, y + (y1 - y) * i / k]); x = x1; y = y1; continue; }
+      const [c1x, c1y, c2x, c2y, x1, y1] = n, k = Math.max(2, Math.ceil((Math.hypot(c1x - x, c1y - y) + Math.hypot(c2x - c1x, c2y - c1y) + Math.hypot(x1 - c2x, y1 - c2y)) / cada));
+      for (let i = 1; i <= k; i++) { const s = i / k, r = 1 - s; pts.push([r * r * r * x + 3 * r * r * s * c1x + 3 * r * s * s * c2x + s * s * s * x1, r * r * r * y + 3 * r * r * s * c1y + 3 * r * s * s * c2y + s * s * s * y1]); }
+      x = x1; y = y1;
+    }
+    return pts;
+  }
+  const largos = new Map(), muestras = new Map();
+  function largo(t) {
+    if (largos.has(t.id)) return largos.get(t.id);
+    const p = muestrear(t, 2);
+    let l = 0;
+    for (let i = 1; i < p.length; i++) l += Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]);
+    largos.set(t.id, l);
+    return l;
+  }
+  function puntas(avance) {
+    const out = [];
+    for (const t of TRAZOS) {
+      if (!muestras.has(t.id)) { const p = muestrear(t, 2), acum = [0]; for (let i = 1; i < p.length; i++) acum.push(acum[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1])); muestras.set(t.id, { p, acum }); }
+      const { p, acum } = muestras.get(t.id), meta = acum[acum.length - 1] * avance;
+      let i = 1;
+      while (i < acum.length - 1 && acum[i] < meta) i++;
+      out.push(p[i]);
+    }
+    return out;
+  }
+  // el monograma en píxeles: se traza chico, se separa metal de borde por color y se repinta en escalones con filo y bisel
+  function monogramaPixel(anchoPx, avance, E) {
+    const esc = anchoPx / CAJA.w, alto = Math.ceil(CAJA.h * esc) + 4, ancho = Math.ceil(anchoPx) + 4;
+    const c = document.createElement('canvas'); c.width = ancho; c.height = alto;
+    const g = c.getContext('2d');
+    for (const capa of [0, 1]) for (const t of TRAZOS) {
+      if (t.capa !== capa) continue;
+      const p = camino2d(t, esc, 2, 2), l = largo(t) * esc;
+      g.save(); if (avance < 1) g.setLineDash([Math.max(0.01, l * avance), l + 10]); g.lineCap = 'butt';
+      g.lineWidth = GROSOR * esc + 2.2; g.strokeStyle = '#ff0000'; g.stroke(p);
+      g.lineWidth = GROSOR * esc; g.strokeStyle = '#00ff00'; g.stroke(p);
+      g.restore();
+    }
+    const img = g.getImageData(0, 0, ancho, alto), d = img.data, metal = new Uint8Array(ancho * alto), borde = new Uint8Array(ancho * alto);
+    for (let i = 0; i < ancho * alto; i++) { if (d[i * 4 + 3] < 90) continue; if (d[i * 4 + 1] > 110) metal[i] = 1; else if (d[i * 4] > 110) borde[i] = 1; }
+    const ESC = E.metal || ['#f4f5f8', '#d9dbe1', '#b7bbc4', '#8d929c', '#a9adb6', '#d3d6dc', '#9ea3ad', '#767b85'];
+    const FILO = E.filo || '#ffffff', BISEL = E.bisel || '#5b5f68', BO = parseInt((E.borde || '#050608').slice(1), 16);
+    for (let y = 0; y < alto; y++) for (let x = 0; x < ancho; x++) {
+      const i = y * ancho + x, k = i * 4;
+      if (metal[i]) {
+        const arriba = y > 0 && metal[i - ancho], abajo = y < alto - 1 && metal[i + ancho], izq = x > 0 && metal[i - 1], der = x < ancho - 1 && metal[i + 1];
+        let col = ESC[Math.min(ESC.length - 1, Math.floor((y - 2) / (alto - 4) * ESC.length))];
+        if (!arriba || !izq) col = FILO; else if (!abajo || !der) col = BISEL;
+        const n = parseInt(col.slice(1), 16);
+        d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; d[k + 3] = 255;
+      } else if (borde[i]) { d[k] = BO >> 16; d[k + 1] = (BO >> 8) & 255; d[k + 2] = BO & 255; d[k + 3] = 255; } else d[k + 3] = 0;
+    }
+    g.putImageData(img, 0, 0);
+    c.mascara = metal; c.esc = esc;
+    return c;
+  }
+  const T_CORTE = 0.12, T_ABRE = 0.42, T_TRAZA0 = 0.3, T_TRAZA1 = 0.86, T_GOLPE = 0.88, T_BRILLO = [0.95, 1.35], T_LETRAS = 1.02, T_FIN = 2.1;
+  function crear(o) {
+    const W = o.W, H = o.H, cx = Math.floor(W / 2), cy = Math.round(H * 0.42), E = o.estilo || {};
+    const ancho = E.anchoLogo ? E.anchoLogo(W, H) : Math.round(Math.min(W * 0.66, H * 0.9, 120));
+    const fondo = E.fondo ? E.fondo(W, H, cx, cy) : null;
+    const PUNTAS = E.puntas || ['#ffffff', '#ffd27a'], GOLPE = E.golpe || ['#ffffff', '#ffd27a', '#c9ccd4', '#7ad7ff'];
+    let chispas = [], sacudida = 0, golpeado = false, letras = 0, pts = null, cache = { avance: -1, c: null };
+    const I = {
+      t: 0, listo: false, cx, cy, ancho, W, H, yPalabra: Math.round(cy + ancho * 0.29 + 4),
+      saltar() { if (I.t > 0.35) I.listo = true; },
+      pasar(dt) {
+        I.t += dt;
+        if (I.t > T_TRAZA0 && I.t < T_TRAZA1 && pts) for (const [x, y] of pts) for (let k = 0; k < 2; k++) {
+          const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 50;
+          chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 10, t: 0, vida: 0.25 + Math.random() * 0.2, col: PUNTAS[(Math.random() * PUNTAS.length) | 0] });
+        }
+        if (!golpeado && I.t >= T_GOLPE) {
+          golpeado = true; sacudida = 4;
+          if (o.vibrar) o.vibrar([30, 20, 40]);
+          for (let k = 0; k < 70; k++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120; chispas.push({ x: cx + (Math.random() - 0.5) * ancho, y: cy + (Math.random() - 0.5) * ancho * 0.4, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 20, t: 0, vida: 0.5 + Math.random() * 0.5, col: GOLPE[k % GOLPE.length] }); }
+        }
+        letras = lim(Math.floor((I.t - T_LETRAS) / 0.04) + 1, 0, 9);
+        for (const c of chispas) { c.t += dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 120 * dt; c.vx *= 0.96; }
+        chispas = chispas.filter(c => c.t < c.vida);
+        sacudida *= Math.pow(0.84, dt * 60);
+        if (I.t >= T_FIN) I.listo = true;
+      },
+      dibujar(g) {
+        const t = I.t;
+        g.fillStyle = E.negro || '#05040b'; g.fillRect(0, 0, W, H);
+        const s = Math.round(sacudida), sx = s ? Math.round((Math.random() * 2 - 1) * s) : 0, sy = s ? Math.round((Math.random() * 2 - 1) * s) : 0;
+        if (t < T_CORTE) { const w = Math.round(W * t / T_CORTE); g.fillStyle = '#f6f3ff'; g.fillRect(Math.round(cx - w / 2), cy, w, E.chispa || 1); return; }
+        const abre = lim((t - T_CORTE) / (T_ABRE - T_CORTE), 0, 1), alto = Math.round((Math.max(cy, H - cy) + 4) * salidaAtras(abre));
+        g.save(); g.beginPath(); g.rect(0, cy - alto, W, alto * 2); g.clip();
+        if (fondo) g.drawImage(fondo, sx, sy, W, H);
+        if (E.antes) E.antes(g, t, I);
+        g.restore();
+        if (abre < 1) { g.fillStyle = '#d9dce3'; g.fillRect(0, cy - alto, W, E.chispa || 1); g.fillRect(0, cy + alto - (E.chispa || 1), W, E.chispa || 1); }
+        const avance = lim((t - T_TRAZA0) / (T_TRAZA1 - T_TRAZA0), 0, 1);
+        if (avance > 0 && E.logo) {
+          const esc = ancho / CAJA.w, x0 = cx - ancho / 2 + sx, y0 = cy - CAJA.h * esc / 2 + sy;
+          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + px * esc, y0 + py * esc]) : null;
+          E.logo(g, { avance, t, x0, y0, esc, ancho, golpe: t >= T_GOLPE, tGolpe: t - T_GOLPE, TRAZOS, camino2d, largo, muestrear, salida, lim });
+          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
+        } else if (avance > 0) {
+          const a = Math.round(avance * 40) / 40;
+          if (cache.avance !== a) cache = { avance: a, c: monogramaPixel(ancho, a, E) };
+          const m = cache.c, x0 = Math.round(cx - m.width / 2) + sx, y0 = Math.round(cy - m.height / 2) + sy;
+          pts = avance < 1 ? puntas(avance).map(([px, py]) => [x0 + 2 + px * m.esc, y0 + 2 + py * m.esc]) : null;
+          g.drawImage(m, x0, y0);
+          if (t >= T_GOLPE && t < T_GOLPE + 0.06) { g.fillStyle = E.destello || 'rgba(255,255,255,0.85)'; g.fillRect(0, 0, W, H); }
+          if (t > T_BRILLO[0] && t < T_BRILLO[1]) {
+            const k = (t - T_BRILLO[0]) / (T_BRILLO[1] - T_BRILLO[0]), bx = Math.round(-10 + k * (m.width + 20));
+            g.fillStyle = 'rgba(255,255,255,0.6)';
+            for (let y = 0; y < m.height; y++) for (let dx = -2; dx <= 2; dx++) { const px = bx + dx - Math.round(y * 0.5); if (px >= 0 && px < m.width && m.mascara[y * m.width + px]) g.fillRect(x0 + px, y0 + y, 1, 1); }
+          }
+        }
+        if (letras > 0 && E.letras) {
+          E.letras(g, 'JXSTUDIOS'.slice(0, letras), I, t, I.yPalabra + sy);
+          if (t > T_LETRAS + 0.5 && E.presentaTxt) E.presentaTxt(g, o.presenta || 'PRESENTA', I, t, I.yPalabra + sy);
+        }
+        if (E.despues) E.despues(g, t, I);
+        const tc = E.chispa || 1;
+        for (const c of chispas) { if (c.t > c.vida * 0.7 && ((c.t * 30) | 0) % 2) continue; if (E.dibujarChispa) E.dibujarChispa(g, c); else { g.fillStyle = c.col; g.fillRect(Math.round(c.x), Math.round(c.y), tc, tc); } }
+      },
+    };
+    return I;
+  }
+  // la música de la intro, agendada con el reloj del audio: cada golpe cae con su cuadro
+  function jingle(ctx, destino, E) {
+    if (!ctx || ctx.state !== 'running') return null;
+    const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(destino || ctx.destination);
+    const f = m => 440 * Math.pow(2, (m - 69) / 12);
+    const tono = (onda, f0, f1, dur, vol, t, ataque) => {
+      const o = ctx.createOscillator(), gn = ctx.createGain();
+      o.type = onda; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      gn.gain.setValueAtTime(0.0001, t); gn.gain.linearRampToValueAtTime(vol, t + (ataque || 0.005)); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(gn); gn.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+    };
+    const n = ctx.sampleRate, buf = ctx.createBuffer(1, n, n), dd = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) dd[i] = Math.random() * 2 - 1;
+    const soplo = (dur, vol, tipo, f0, f1, t) => {
+      const s = ctx.createBufferSource(), fl = ctx.createBiquadFilter(), gn = ctx.createGain();
+      s.buffer = buf; fl.type = tipo; fl.Q.value = 1.2; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(fl); fl.connect(gn); gn.connect(bus); s.start(t); s.stop(t + dur + 0.05);
+    };
+    const t0 = ctx.currentTime + 0.03, tg = t0 + T_GOLPE;
+    if (E && E.jingle) E.jingle(ctx, bus, t0, tg, { tono, soplo, f, T: { T_LETRAS, T_GOLPE, T_FIN } });
+    else {
+      soplo(0.2, 0.12, 'bandpass', 700, 5200, t0);
+      [0.3, 0.38, 0.46, 0.54].forEach((d, k) => tono('square', 240 + k * 70, 1300 + k * 240, 0.16, 0.035, t0 + d));
+      tono('sine', 115, 30, 0.95, 0.55, tg);
+      for (const [fr, v, d] of [[523, 0.08, 1.3], [1247, 0.05, 1], [2011, 0.035, 0.75], [3150, 0.025, 0.5]]) tono('sine', fr, 0, d, v, tg);
+      soplo(0.4, 0.25, 'lowpass', 4200, 260, tg);
+      [84, 88, 91, 95, 98, 103].forEach((m, k) => tono('triangle', f(m), 0, 0.28, 0.05, tg + 0.07 + k * 0.035));
+      for (let k = 0; k < 9; k++) tono('square', 1320 + (k % 3) * 110, 0, 0.022, 0.03, t0 + T_LETRAS + k * 0.04);
+      for (const m of [48, 55, 64, 71, 74]) tono('triangle', f(m), 0, 1.35, 0.05, t0 + 1.1, 0.25);
+    }
+    return { cortar: () => bus.gain.setTargetAtTime(0, ctx.currentTime, 0.05) };
+  }
+  return { crear, jingle, salida, salidaAtras, DURA: T_FIN };
+})();
+// "elegí tu idioma" en cada idioma (la pantalla que va después de la intro) y "presenta"
+const ELEGI_IDIOMA = { es: 'ELEGÍ TU IDIOMA', 'es-MX': 'ELIGE TU IDIOMA', en: 'CHOOSE YOUR LANGUAGE', pt: 'ESCOLHA SEU IDIOMA', ar: 'اختر لغتك', id: 'PILIH BAHASAMU', ms: 'PILIH BAHASA ANDA', fil: 'PUMILI NG WIKA', tr: 'DİLİNİ SEÇ', ur: 'اپنی زبان چنیں', th: 'เลือกภาษาของคุณ', my: 'ဘာသာစကား ရွေးပါ', ja: 'ことばをえらんでね' };
+const PRESENTA = { es: 'presenta', 'es-MX': 'presenta', en: 'presents', pt: 'apresenta', ar: 'تقدّم', id: 'mempersembahkan', ms: 'mempersembahkan', fil: 'naghahandog', tr: 'sunar', ur: 'پیش کرتا ہے', th: 'นำเสนอ', my: 'တင်ဆက်သည်', ja: 'プレゼンツ' };
+
+// FAMATINA — la intro de JXSTUDIOS a su estilo: la roca de la mina se abre con un tajo de luz, el monograma
+// JXS se escribe en ORO con chispas de pico en las puntas, en el golpe estalla la dinamita (destello, polvo y
+// piedras) y JXSTUDIOS se tipea en la letra de píxeles del juego. La música: picos, la explosión, charango y quena.
+function fondoRoca(W, H, cx, cy) {
+  const c = lienzo(W, H), g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data, r = rngSemilla(23);
+  const ruido = (x, y) => { const h = Math.imul(x * 374761393 + y * 668265263, 1274126177); return ((h ^ (h >>> 15)) >>> 0) / 4294967296; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const n = ruido(x >> 2, y >> 2) * 0.55 + ruido(x >> 1, y >> 1) * 0.3 + ruido(x, y) * 0.15, luz = 1 - Math.min(1, Math.hypot(x - cx, (y - cy) * 1.2) / Math.max(W, H) * 1.4);
+    const v = 14 + n * 16 + luz * 18, k = (y * W + x) * 4;
+    d[k] = v + 9; d[k + 1] = v + 4; d[k + 2] = v; d[k + 3] = 255;
+  }
+  const pon = (x, y, col) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const k = (y * W + x) * 4, n = parseInt(col.slice(1), 16); d[k] = n >> 16; d[k + 1] = (n >> 8) & 255; d[k + 2] = n & 255; };
+  // vetas de oro que cruzan la roca y piedritas claras
+  for (let v = 0; v < 7; v++) {
+    let x = r() * W, y = r() * H, a = r() * Math.PI * 2;
+    for (let i = 0; i < 70; i++) { a += (r() - 0.5) * 0.7; x += Math.cos(a) * 1.4; y += Math.sin(a) * 1.4; pon(Math.round(x), Math.round(y), r() < 0.25 ? '#fff0a0' : r() < 0.6 ? '#e0a83a' : '#a86a1e'); }
+  }
+  for (let i = 0; i < W * H / 60; i++) pon((r() * W) | 0, (r() * H) | 0, r() < 0.5 ? '#5a4a40' : '#3a2e28');
+  g.putImageData(img, 0, 0);
+  return c;
+}
+const ESTILO_FAMATINA = {
+  negro: '#07050a', chispa: 1,
+  metal: ['#fff6c0', '#ffe58a', '#f8cf55', '#f0b83a', '#e09a2a', '#f8cf55', '#c87a1e', '#a85e16'],
+  filo: '#fffbe6', bisel: '#6a3a0a', borde: '#140a04',
+  puntas: ['#ffffff', '#ffe08a', '#ff9a3a'],
+  golpe: ['#ffffff', '#ffd27a', '#e0a040', '#8a7060', '#5a4a40', '#b0a090'],
+  destello: 'rgba(255,236,170,0.85)',
+  fondo: (W, H, cx, cy) => fondoRoca(W, H, cx, cy),
+  letras(g, parte, I, t, y) {
+    const tt = I.W >= 200 ? 2 : 1, w = anchoTxt(g, 'JXSTUDIOS', { t: tt }), x = Math.round(I.cx - w / 2);
+    txt(g, parte, x, y, { t: tt, c: ORO7, b: '#1a0a04' });
+    if (parte.length < 9 && ((t * 20) | 0) % 2) rect(g, x + anchoTxt(g, parte, { t: tt }) + tt, y, tt, 7 * tt, '#fff6d8');
+  },
+  presentaTxt(g, s, I, t, y) { const tt = I.W >= 200 ? 2 : 1; txt(g, s, I.cx, y + 12 * tt, { al: 0.5, c: '#c8a878', b: '#1a0a04', max: I.W - 10 }); },
+  jingle(ctx, bus, t0, tg, h) {
+    const { tono, soplo, f, T } = h;
+    soplo(0.2, 0.1, 'bandpass', 900, 4000, t0);                                                         // el tajo de luz
+    [0.3, 0.42, 0.54, 0.66].forEach((d, k) => { tono('square', 1900 + k * 90, 1200, 0.05, 0.05, t0 + d); soplo(0.04, 0.08, 'highpass', 3000, 2500, t0 + d); });   // los picos
+    tono('sine', 90, 30, 0.9, 0.6, tg); soplo(0.9, 0.4, 'lowpass', 2400, 80, tg);                     // la dinamita
+    tono('sine', 880, 0, 0.8, 0.08, tg + 0.05); tono('sine', 1760, 0, 0.5, 0.04, tg + 0.05);           // la campana de la mina
+    [64, 67, 71, 76, 79].forEach((m, k) => tono('triangle', f(m), 0, 0.45, 0.06, tg + 0.15 + k * 0.03));   // rasgueo de charango
+    for (let k = 0; k < 9; k++) tono('square', 1320 + (k % 3) * 110, 0, 0.022, 0.03, t0 + T.T_LETRAS + k * 0.04);
+    tono('sine', f(76), 0, 1.0, 0.07, t0 + 1.5, 0.12); tono('sine', f(88), 0, 0.8, 0.015, t0 + 1.5, 0.12);   // la quena
+  },
+};
 
 // FAMATINA — interfaz: HUD, botones flotantes, paneles, título, telón y tutorial (modo inmediato con zonas)
 let ZONAS = [], ZONAS_PREV = [];
@@ -2875,7 +3165,7 @@ function panelOpciones(g, P) {
   let yy = y + 24;
   filaOpcion(g, x, yy, w, tr('musica')); deslizador(g, cx, yy + 1, cw, OP.musica, v => { OP.musica = v; Sonido.volumen(OP.musica, OP.sonido); guardarOp(); }); yy += 17;
   filaOpcion(g, x, yy, w, tr('sonido')); deslizador(g, cx, yy + 1, cw, OP.sonido, v => { OP.sonido = v; Sonido.volumen(OP.musica, OP.sonido); guardarOp(); }); yy += 17;
-  filaOpcion(g, x, yy, w, tr('idioma')); boton(g, cx, yy, cw, 14, null, () => abrirPanel('idioma'), { estilo: 'azul', dibujar: (g2, bx, by, bw, bh, Pb) => { icono(g2, 'globo', bx + 3, by + 2); txt(g2, nombreIdioma(), bx + 15, by + 3, { c: '#ffffff', b: Pb.bor, max: bw - 18 }); } }); yy += 18;
+  filaOpcion(g, x, yy, w, tr('idioma')); boton(g, cx, yy, cw, 14, null, () => abrirPanel('idioma'), { estilo: 'azul', dibujar: (g2, bx, by, bw, bh, Pb) => { icono(g2, 'globo', bx + 3, by + 2); const nom = nombreIdioma(), chico = esPx(mayus(nom), 'px') && anchoTxt(g2, nom) > bw - 18; txt(g2, nom, bx + 15, by + (chico ? 4 : 3), { c: '#ffffff', b: Pb.bor, max: bw - 18, f: chico ? 'mini' : 'px' }); } }); yy += 18;
   filaOpcion(g, x, yy, w, tr('controles')); boton(g, cx, yy, cw, 14, tr('controles'), () => abrirPanel('controles', { sel: 'minas' }), { estilo: 'piedra', icono: 'mano' }); yy += 18;
   const tres = (opts, val, fn) => { const bw = Math.floor((cw - (opts.length - 1) * 2) / opts.length); opts.forEach(([v, et], k) => boton(g, cx + k * (bw + 2), yy, bw, 14, et, () => fn(v), { estilo: val === v ? 'azul' : 'piedra', sel: val === v })); };
   filaOpcion(g, x, yy, w, tr('calidad')); tres([['auto', tr('auto')], ['alta', tr('alta')], ['baja', tr('baja')]], OP.calidad, v => { OP.calidad = v; CALIDAD = v === 'baja' ? 'baja' : 'alta'; guardarOp(); }); yy += 18;
@@ -3015,6 +3305,29 @@ function hudCarrera(g) {
   botonRedondo(g, W - 11, 30, 8, 'engranaje', () => confirmar(tr('abandonar'), () => { CARRERA.t = CARRERA.dur; }));
 }
 
+// ---------- después de la intro: elegir el idioma (el cartel pasa por los 13 idiomas) ----------
+function escenaIdioma(g) {
+  const tt = W >= 216 ? 3 : 2, yT = Math.round(H * 0.08);
+  g.fillStyle = 'rgba(10,6,4,0.45)'; g.fillRect(0, 0, W, H);
+  txt(g, 'FAMATINA', W / 2, yT, { t: tt, al: 0.5, c: ORO7, b: '#1a0a04', s: '#1a0a04', max: W - 6 });
+  const cods = IDIOMAS.map(l => l[0]), per = 1.6, i = Math.floor(T / per) % cods.length, k = (T % per) / per, a = Math.max(0, Math.min(1, k / 0.15, (1 - k) / 0.15));
+  const yP = yT + 7 * tt + 12, viejo = IDIOMA;
+  IDIOMA = cods[i]; g.globalAlpha = a; txt(g, ELEGI_IDIOMA[cods[i]], W / 2, yP, { al: 0.5, c: '#fff0d0', b: '#1a0a04', max: W - 10 }); g.globalAlpha = 1; IDIOMA = viejo;
+  const port = H > W * 1.2, cols = port ? 2 : 3, filas = Math.ceil(IDIOMAS.length / cols), gap = 4;
+  const y0 = yP + 18, bh = Math.max(14, Math.min(20, Math.floor((H - y0 - 10 - gap * (filas - 1)) / filas))), bw = Math.floor(Math.min(port ? 98 : 110, (W - 16 - gap * (cols - 1)) / cols));
+  const x0 = Math.round(W / 2 - (cols * bw + (cols - 1) * gap) / 2), resto = IDIOMAS.length % cols;
+  IDIOMAS.forEach(([cod, nom], j) => {
+    const f = Math.floor(j / cols), ultima = resto && f === filas - 1, sel = cod === IDIOMA;
+    const bx = x0 + (j % cols) * (bw + gap) + (ultima ? Math.round((cols - resto) * (bw + gap) / 2) : 0), by = y0 + f * (bh + gap);
+    boton(g, bx, by, bw, bh, null, () => elegirIdioma(cod), { estilo: sel ? 'oro' : 'piedra', sel, dibujar: (g2, x2, y2, w2, h2, Pb) => {
+      const v = IDIOMA; IDIOMA = cod;
+      const chico = esPx(mayus(nom), 'px') && anchoTxt(g2, nom) > w2 - 6;
+      txt(g2, nom, x2 + w2 / 2, y2 + Math.round((h2 - (chico ? 5 : 7)) / 2), { al: 0.5, c: Pb.txt, b: Pb.bor, max: w2 - 6, f: chico ? 'mini' : 'px' });
+      IDIOMA = v;
+    } });
+  });
+}
+
 // ---------- título ----------
 function escenaTitulo(g) {
   const portada = PARAM.has('portada'), tt = W >= 216 ? 4 : 3, yT = Math.round(H * (portada ? 0.16 : 0.12) + Math.sin(T * 1.4) * 2);
@@ -3089,7 +3402,7 @@ const LENTA = { t: 0 };
 const TELON = { fase: 0, t: 0, alMedio: null };
 const E = { punteros: new Map(), clics: [] };
 const AVISOS = [], TOASTS = [], ERRORES = [];
-let lz = null, gp = null;
+let lz = null, gp = null, INTRO = null, MUS_INTRO = null;
 
 function nuevoG() {
   return {
@@ -3237,6 +3550,15 @@ function terminarCarrera() {
   revisarLogros(); guardar();
 }
 
+// ---------- intro de JXSTUDIOS (siempre) y pantalla de idioma ----------
+function empezarIntro() {
+  INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_FAMATINA });
+  Sonido.callar = true;
+  MUS_INTRO = Sonido.ok() ? IntroJXS.jingle(Sonido.ctx, Sonido.master, ESTILO_FAMATINA) : null;
+}
+function saltarIntro() { if (!INTRO) return; INTRO.saltar(); if (INTRO.listo && MUS_INTRO) MUS_INTRO.cortar(); }
+function elegirIdioma(cod) { cambiarIdioma(cod); irA('titulo'); }
+
 // ---------- escenas y telón ----------
 function irA(esc, alMedio) {
   if (TELON.fase) return false;
@@ -3325,6 +3647,7 @@ function prepararEntrada() {
   lz.addEventListener('wheel', e => { e.preventDefault(); if (puedeDesplazar()) { CAM.y += e.deltaY * 0.35; CAM.obj = null; CAM.vy = 0; } }, { passive: false });
   window.addEventListener('keydown', e => {
     Sonido.iniciar();
+    if (ESCENA === 'intro') { saltarIntro(); return; }
     if (e.key === 'Escape') { if (CONF) CONF = null; else if (PANEL) { if (PANEL.tipo !== 'diario' && PANEL.tipo !== 'bienvenida' && PANEL.tipo !== 'fiebreFin') cerrarPanel(); } else if (ESCENA === 'mina') abrirPanel('opciones'); }
     if (puedeDesplazar()) { if (e.key === 'ArrowDown' || e.key === 'PageDown') CAM.obj = clamp(CAM.y + (e.key === 'PageDown' ? H * 0.8 : 44), 0, camMax(MC())); if (e.key === 'ArrowUp' || e.key === 'PageUp') CAM.obj = clamp(CAM.y - (e.key === 'PageUp' ? H * 0.8 : 44), 0, camMax(MC())); if (e.key === 'Home') CAM.obj = 0; if (e.key === 'End') CAM.obj = camMax(MC()); }
   });
@@ -3359,7 +3682,7 @@ function resolverClics() {
   E.clics.length = 0;
 }
 function moverCamara(dt) {
-  if (ESCENA === 'titulo') { CAM.y = lerp(CAM.y, Math.min(0, SUELO - H * 0.56), 1 - Math.exp(-6 * dt)); return; }
+  if (ESCENA === 'titulo' || ESCENA === 'idioma' || ESCENA === 'intro') { CAM.y = lerp(CAM.y, Math.min(0, SUELO - H * 0.56), 1 - Math.exp(-6 * dt)); return; }
   const mx = camMax(MC());
   let arrastrando = false;
   for (const p of E.punteros.values()) if (p.arr && p.scroll) arrastrando = true;
@@ -3377,13 +3700,14 @@ function redimensionar() {
   const iw = window.innerWidth, ih = window.innerHeight, pw = iw * DPR, ph = ih * DPR;
   ESC = Math.max(1, Math.floor(Math.min(pw / 216, ph / 300)));
   W = clamp(Math.floor(pw / ESC), 160, 960); H = clamp(Math.floor(ph / ESC), 240, 960);
-  RES = Math.min(ESC, 6);
+  RES = Math.min(ESC, 4);   // más de 4 no se ve y en un celu de 1080 px pintaba 2,5 millones de píxeles por cuadro
   lz.width = W * RES; lz.height = H * RES;
   const cw = W * ESC / DPR, ch = H * ESC / DPR;
   lz.style.width = cw + 'px'; lz.style.height = ch + 'px';
   lz.style.left = Math.floor((iw - cw) / 2) + 'px'; lz.style.top = Math.floor((ih - ch) / 2) + 'px';
   gp = lz.getContext('2d');
   prepararMundo(); REJA = null; _mapa = null;
+  if (ESCENA === 'intro' && INTRO && !INTRO.listo) { const t = INTRO.t; INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_FAMATINA }); INTRO.t = t; }
   if (MA) CAM.y = clamp(CAM.y, 0, camMax(MC()));
 }
 
@@ -3394,6 +3718,11 @@ function actualizar(dt) {
   if (TELON.fase === 1) { TELON.t += dt / 0.3; if (TELON.t >= 1) { TELON.t = 1; TELON.fase = 2; const f = TELON.alMedio; TELON.alMedio = null; if (f) f(); } }
   else if (TELON.fase === 2) { TELON.t -= dt / 0.3; if (TELON.t <= 0) { TELON.t = 0; TELON.fase = 0; } }
   if (PANEL) PANEL.t += dt;
+  if (ESCENA === 'intro') {
+    INTRO.pasar(dt);
+    if (INTRO.listo && !TELON.fase) { Sonido.callar = false; irA('idioma'); }
+    return;
+  }
   let dts = dt;
   if (LENTA.t > 0) { LENTA.t -= dt; dts *= 0.35; }
   simular(dts * TURBO);
@@ -3413,9 +3742,11 @@ function dibujar() {
   ZONAS = [];
   g.setTransform(RES, 0, 0, RES, 0, 0);
   g.imageSmoothingEnabled = false;
+  if (ESCENA === 'intro' && INTRO) { INTRO.dibujar(g); zona(0, 0, W, H, saltarIntro); dibujarTelon(g); resolverClics(); ZONAS_PREV = ZONAS; return; }
   dibujarMundo(m, T);
   componerMundo(g, ZURDO);
   if (ESCENA === 'titulo') escenaTitulo(g);
+  else if (ESCENA === 'idioma') escenaIdioma(g);
   else {
     uiMundo(g, m);
     hudSuperior(g, m);
@@ -3485,6 +3816,7 @@ function iniciar() {
   if (c) c.remove();
   if (PARAM.has('portada')) { G.desfase = 0.765 * 480 - G.reloj; MA.ev.condor = { t: 4.6, dur: 12, dir: 1, y: 0.15 }; MA.ev.tC = 1e9; }
   if (PARAM.has('directo')) { ESCENA = 'mina'; alEntrarMina(); }
+  else if (!PARAM.has('portada') && (!PRUEBA || PARAM.has('intro'))) { ESCENA = 'intro'; empezarIntro(); }
   requestAnimationFrame(cuadro);
 }
 
@@ -3495,7 +3827,7 @@ window.__juego = {
   get W() { return W; }, get H() { return H; }, get cam() { return CAM.y; }, set cam(v) { CAM.y = v; CAM.obj = null; CAM.vy = 0; },
   paso(dt, dib) { actualizar(dt); if (dib !== false) dibujar(); },
   simular(seg, conBot) { const b = BOT, tb = TURBO; BOT = conBot !== false; TURBO = 2; let s = seg; while (s > 0) { const k = Math.min(1, s); simular(k); pasoParticulas(k); s -= k; } FLOT.length = 0; BANNERS.length = 0; BOT = b; TURBO = tb; },
-  escenaA(e) { ESCENA = e; if (e === 'mina') alEntrarMina(); }, abrir(t, d) { abrirPanel(t, d); }, cerrar() { PANEL = null; CONF = null; AVISOS.length = 0; },
+  escenaA(e) { ESCENA = e; if (e === 'intro') empezarIntro(); if (e === 'mina') alEntrarMina(); }, get intro() { return INTRO && { t: INTRO.t, listo: INTRO.listo }; }, abrir(t, d) { abrirPanel(t, d); }, cerrar() { PANEL = null; CONF = null; AVISOS.length = 0; },
   idioma(c) { cambiarIdioma(c); }, mina(k) { cambiarMina(k); }, fase(f) { G.desfase = f * 480 - G.reloj; },
   carrera0() { const des = desafioDelDia(hoy()); parDelDia(des); CARRERA = nuevaCarrera(des); CARRERA.mina.on = ganchos(CARRERA.mina); ESCENA = 'carrera'; CAM.y = 0; },
   terminarCarrera() { if (CARRERA) { CARRERA.t = CARRERA.dur; terminarCarrera(); } }, dibujar() { dibujar(); }, tr,

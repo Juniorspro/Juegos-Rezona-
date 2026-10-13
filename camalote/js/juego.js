@@ -6,10 +6,10 @@ const TELON = { fase: 0, t: 0, alMedio: null };
 const E = { punteros: new Map(), clics: [], teclas: new Set() };
 const PULSO = { A: 0, B: 0, C: 0, D: 0 }, TECLA_B = { A: false, B: false, C: false, D: false };
 const ERRORES = [];
-let lz = null, gp = null, tGuardar = 0;
+let lz = null, gp = null, tGuardar = 0, INTRO = null, MUS_INTRO = null;
 
 function nuevoG() { return { v: 1, cap: 1, nivel: 'c1', items: {}, mundo: {}, figus: {}, check: null, objetivo: null, hpMax: 6, tiempo: 0, fin: false }; }
-function opDefecto() { return { v: 1, calidad: 'alta', musica: 0.7, sonido: 0.8, vibrar: true, zurdo: false, palanca: 'flotante', pos: { v: {}, h: {} }, tam: {}, opac: {} }; }
+function opDefecto() { return { v: 1, calidad: null, musica: 0.7, sonido: 0.8, vibrar: true, zurdo: false, palanca: 'flotante', pos: { v: {}, h: {} }, tam: {}, opac: {} }; }
 function guardar() { if (!G || !HAY_PARTIDA) return; if (guionActivo()) { PEND_G = true; return; } G.t = Date.now(); Guardado.escribir('datos', G); HAY_PARTIDA = true; }
 function guardarOp() { Guardado.escribir('opciones', OP); }
 
@@ -20,6 +20,13 @@ function irA(esc, alMedio) {
   if (PRUEBA) { f(); return; }
   TELON.fase = 1; TELON.t = 0; TELON.alMedio = f; Sonido.ola();
 }
+// la intro de JXSTUDIOS (siempre) y después la pantalla de idioma
+function empezarIntro() {
+  INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_CAMALOTE });
+  MUS_INTRO = Sonido.ok() ? IntroJXS.jingle(Sonido.ctx, Sonido.master, ESTILO_CAMALOTE) : null;
+}
+function saltarIntro() { if (!INTRO) return; INTRO.saltar(); if (INTRO.listo && MUS_INTRO) MUS_INTRO.cortar(); }
+function elegirIdioma(cod) { cambiarIdioma(cod); irA('titulo', () => Sonido.musica(0)); }
 function nuevaPartida() {
   G = nuevoG(); Guardado.escribir('datos', G); HAY_PARTIDA = true;
   irA('laminas', () => { LAM = { lista: LAMINAS.prologo, i: 0, t: 0, fin: () => cambiarCapitulo(1) }; Sonido.musica(4); });
@@ -119,7 +126,7 @@ function prepararEntrada() {
     if (k === 'Escape' || k === 'p') { if (!e.repeat) teclaEscape(); e.preventDefault(); return; }
     if (TECLAS[k]) { E.teclas.add(TECLAS[k]); e.preventDefault(); }
     const b = TECLAS_B[k];
-    if (b) { e.preventDefault(); TECLA_B[b] = true; if (!e.repeat) { PULSO[b] = 0.15; if (ESCENA === 'titulo' && !PANEL && b === 'A') (HAY_PARTIDA && !G.fin ? continuarPartida : nuevaPartida)(); } }
+    if (b) { e.preventDefault(); TECLA_B[b] = true; if (!e.repeat) { PULSO[b] = 0.15; if (ESCENA === 'titulo' && !PANEL && b === 'A' && !TELON.fase) (HAY_PARTIDA && !G.fin ? continuarPartida : nuevaPartida)(); } }
   });
   window.addEventListener('keyup', e => {
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -155,16 +162,19 @@ function leerEntrada() {
 function redimensionar() {
   DPR = window.devicePixelRatio || 1;
   const iw = Math.max(1, window.innerWidth), ih = Math.max(1, window.innerHeight), esc = Math.min(iw, ih) / 360;
-  W = iw / esc; H = ih / esc;
   // calidad automática: alta (la pantalla entera), media (hasta 2 px por punto), baja (1,5): baja sola y queda guardada
-  const tope = { alta: [9, 4.2e6], media: [2, 2.2e6], baja: [1.5, 1.2e6] }[OP.calidad] || [9, 4.2e6];
-  K = PARAM.has('k') ? +PARAM.get('k') : Math.min(esc * Math.min(DPR, tope[0]), Math.sqrt(tope[1] / (W * H)));
-  lz.width = Math.round(W * K); lz.height = Math.round(H * K);
+  const tope = { alta: [9, 4.2e6], media: [2, 2.2e6], baja: [1.5, 1.2e6] }[OP.calidad] || [2, 2.2e6];
+  const K0 = PARAM.has('k') ? +PARAM.get('k') : Math.min(esc * Math.min(DPR, tope[0]), Math.sqrt(tope[1] / (iw / esc * ih / esc)));
+  // la baldosa cae en píxeles enteros: sin costuras entre pedazos de suelo ni borroneo en los sellos
+  K = Math.max(1 / TS, Math.round(TS * K0) / TS);
+  lz.width = Math.round(iw * K / esc); lz.height = Math.round(ih * K / esc);
+  W = lz.width / K; H = lz.height / K;
   lz.style.width = iw + 'px'; lz.style.height = ih + 'px';
   gp = lz.getContext('2d');
   BANDEJA = H >= W * 1.55;
   VISTA.x = 0; VISTA.y = 0; VISTA.w = W; VISTA.h = BANDEJA ? Math.round(Math.max(W * 1.05, H * 0.62)) : H;
   if (N) limitarCam();
+  if (ESCENA === 'intro' && INTRO && !INTRO.listo) { const t = INTRO.t; INTRO = IntroJXS.crear({ W, H, presenta: PRESENTA[IDIOMA] || 'presenta', vibrar: p => vibrar(p), estilo: ESTILO_CAMALOTE }); INTRO.t = t; }
 }
 
 // ---------- el bucle ----------
@@ -183,6 +193,13 @@ function tipear(dt) {
   if (Math.floor(d.n) > antes && Math.floor(d.n) % 2 === 0) Sonido.blip(d.quien);
 }
 function logica(dt) {
+  if (ESCENA === 'intro') {
+    if (PULSO.A > 0 || PULSO.B > 0) saltarIntro();
+    for (const k in PULSO) PULSO[k] = 0;
+    INTRO.pasar(dt);
+    if (INTRO.listo && !TELON.fase) irA('idioma', () => Sonido.musica(0));
+    return;
+  }
   if (ESCENA === 'juego' && N) {
     if (PANEL) { if (PANEL.tipo === 'controles' && PANEL.modo === 'probar') pasoPrevia(dt); return; }
     if (DLG && (PULSO.A > 0 || PULSO.B > 0)) { avanzarDialogo(); PULSO.A = PULSO.B = 0; }
@@ -221,6 +238,7 @@ function actualizar(dt) {
   if (TOASTS.length && (TOASTS[0].t += dt) > 2.6) TOASTS.shift();
   Sonido.tic();
 }
+const LISTA_DIB = [];
 function dibujarMundo(g) {
   const v = VISTA;
   g.save();
@@ -230,9 +248,10 @@ function dibujarMundo(g) {
   g.translate(ox, oy);
   const x0 = Math.max(0, Math.floor((v.x - ox) / TS) - 1), x1 = Math.min(N.w - 1, Math.ceil((v.x + v.w - ox) / TS) + 1);
   const y0 = Math.max(0, Math.floor((v.y - oy) / TS) - 1), y1 = Math.min(N.h - 1, Math.ceil((v.y + v.h - oy) / TS) + 1);
+  if (N.w * TS < v.w || N.h * TS < v.h) { g.fillStyle = '#16281f'; g.fillRect(v.x - ox, v.y - oy, v.w, v.h); }
   dibujarSuelo(g, N, x0, y0, x1, y1, T);
   for (const f of EFECTOS) if (f.t === 'mancha') dibujarEfecto(g, f, T);
-  const L = [];
+  const L = LISTA_DIB; L.length = 0;
   for (let y = y0; y <= Math.min(N.h - 1, y1 + 2); y++) for (let x = x0; x <= x1; x++) { const c = N.tile(x, y); if (ALTOS.has(c)) L.push([y + 0.95, 0, x, y, c]); }
   for (const e of N.ents) if (!e.muerto && e.x > x0 - 1 && e.x < x1 + 2 && e.y > y0 - 1 && e.y < y1 + 4) L.push([e.y, 1, e]);
   L.push([J.y + 0.01, 2]);
@@ -264,7 +283,9 @@ function dibujar() {
     dibujarToasts(g);
     if (DLG) { prepararDialogo(g); dibujarDialogo(g); }
     if (BAN) dibujarBanner(g);
-  } else if (ESCENA === 'tarjeta' && TARJ) escenaTarjeta(g);
+  } else if (ESCENA === 'intro' && INTRO) { INTRO.dibujar(g); zona(0, 0, W, H, saltarIntro); }
+  else if (ESCENA === 'idioma') escenaIdioma(g);
+  else if (ESCENA === 'tarjeta' && TARJ) escenaTarjeta(g);
   else if (ESCENA === 'laminas' && LAM) escenaLaminas(g);
   else if (ESCENA === 'fin') escenaFin(g);
   else if (ESCENA === 'portada') escenaPortada(g);
@@ -459,6 +480,7 @@ function cargar() {
   G = Object.assign(nuevoG(), d || {});
   HAY_PARTIDA = !!d;
   try { TACTIL = matchMedia('(pointer: coarse)').matches; } catch (e) { }
+  if (!OP.calidad) OP.calidad = TACTIL ? 'media' : 'alta';   // en el celu arranca en media; baja sola si hace falta
 }
 async function iniciar() {
   lz = document.getElementById('lienzo');
@@ -468,8 +490,9 @@ async function iniciar() {
   prepararEntrada();
   const c = document.getElementById('carga');
   if (c) c.remove();
-  Sonido.musica(0);
   if (PARAM.has('portada')) portada();
+  else if (!PRUEBA || PARAM.has('intro')) { ESCENA = 'intro'; empezarIntro(); }
+  else Sonido.musica(0);
   requestAnimationFrame(cuadro);
 }
 
@@ -477,6 +500,7 @@ window.__juego = {
   get G() { return G; }, get N() { return N; }, get J() { return J; }, get escena() { return ESCENA; }, get panel() { return PANEL && PANEL.tipo; },
   get errores() { return ERRORES; }, get fuera() { return FUERA; }, get zonas() { return ZONAS_PREV.map(z => [z.x, z.y, z.w, z.h]); },
   get W() { return W; }, get H() { return H; }, get K() { return K; }, get vista() { return VISTA; }, get bandeja() { return BANDEJA; },
+  get intro() { return INTRO && { t: INTRO.t, listo: INTRO.listo }; },
   get bot() { return BOT; }, set bot(v) { BOT = !!v; MODO_DIOS = !!v; }, set botIdx(v) { BOTST.nivel = N && N.id; BOTST.paso = v; BOTST.t = 0; BOTST.sub = {}; }, get botLog() { return BOTST.log; }, get dlg() { return DLG && { quien: DLG.quien, texto: DLG.texto }; },
   set turbo(v) { TURBO = v; }, set congelado(v) { CONGELADO = !!v; }, set tactil(v) { TACTIL = !!v; }, get tactil() { return TACTIL; },
   paso(dt, dib) { actualizar(dt || PASO); if (dib !== false) dibujar(); },
@@ -488,7 +512,7 @@ window.__juego = {
   idioma(c) { cambiarIdioma(c); }, abrir(t, d) { abrirPanel(t, d); }, cerrar() { PANEL = null; DLG = null; BAN = null; },
   decir(q, k) { abrirDialogo(q, tr(k)); DLG.t = 1; prepararDialogo(gp); DLG.n = DLG.total; },
   premio(tipo, id) { if (tipo === 'figu') bannerFigurita(id); else bannerDar(id); BAN.t = 2; },
-  escenaA(e, d) { ESCENA = e; if (e === 'laminas') LAM = { lista: LAMINAS[d || 'prologo'], i: 0, t: 1, fin: () => { } }; if (e === 'tarjeta') TARJ = { cap: d || 1, t: 2 }; },
+  escenaA(e, d) { ESCENA = e; if (e === 'intro') { empezarIntro(); if (d != null) INTRO.pasar(d); } if (e === 'laminas') LAM = { lista: LAMINAS[d || 'prologo'], i: 0, t: 1, fin: () => { } }; if (e === 'tarjeta') TARJ = { cap: d || 1, t: 2 }; },
   lamina(i) { if (LAM) { LAM.i = i; LAM.t = 1; } },
   tr,
   async medirAudio(seg, o) {

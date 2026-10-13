@@ -92,11 +92,30 @@ function rect(g, x, y, w, h, c) { g.fillStyle = c; g.fillRect(Math.round(x), Mat
 function lin(g, x0, y0, x1, y1, c) {
   g.fillStyle = c;
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+  // derecha o parada: los mismos píxeles en un solo rectángulo
+  if (x0 === x1 || y0 === y1) {
+    const ax = Math.round(x0), ay = Math.round(y0), m = Math.floor(n), bx = Math.round(x0 + (x1 - x0) * m / n), by = Math.round(y0 + (y1 - y0) * m / n);
+    g.fillRect(Math.min(ax, bx), Math.min(ay, by), Math.abs(bx - ax) + 1, Math.abs(by - ay) + 1);
+    return;
+  }
   for (let i = 0; i <= n; i++) g.fillRect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), 1, 1);
 }
+// el disco se pinta una vez por radio y color y se estampa (los botones redondos eran ~700 rectángulos por cuadro)
+const _disco = new Map();
 function disco(g, cx, cy, r, c) {
-  g.fillStyle = c;
-  for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); }
+  if (r !== Math.round(r) || r < 0) {
+    g.fillStyle = c;
+    for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); g.fillRect(Math.round(cx - w), Math.round(cy + y), w * 2 + 1, 1); }
+    return;
+  }
+  const k = c + '|' + r;
+  let s = _disco.get(k);
+  if (!s) {
+    s = lienzo(r * 2 + 1, r * 2 + 1); const h = s.getContext('2d'); h.fillStyle = c;
+    for (let y = -r; y <= r; y++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - y * y + r * 0.6))); h.fillRect(r - w, r + y, w * 2 + 1, 1); }
+    _disco.set(k, s);
+  }
+  g.drawImage(s, Math.round(cx) - r, Math.round(cy) - r);
 }
 function spr(filas, pal) {
   const h = filas.length, w = filas[0].length, c = lienzo(w, h), g = c.getContext('2d'), img = g.createImageData(w, h), d = img.data;
@@ -334,7 +353,7 @@ function capasMontes(m) {
 // ---------- luces ----------
 const _luz = new Map();
 function spriteLuz(col, r) {
-  r = Math.max(2, Math.round(r));
+  r = r > 12 ? Math.round(r / 3) * 3 : Math.max(2, Math.round(r));   // en escalones: la luz que crece no arma un lienzo por cuadro
   const key = col + r;
   let c = _luz.get(key);
   if (c) return c;

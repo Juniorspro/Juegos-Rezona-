@@ -579,7 +579,7 @@ function panelOpciones(g, P) {
   let yy = y + 24;
   filaOpcion(g, x, yy, w, tr('musica')); deslizador(g, cx, yy + 1, cw, OP.musica, v => { OP.musica = v; Sonido.volumen(OP.musica, OP.sonido); guardarOp(); }); yy += 17;
   filaOpcion(g, x, yy, w, tr('sonido')); deslizador(g, cx, yy + 1, cw, OP.sonido, v => { OP.sonido = v; Sonido.volumen(OP.musica, OP.sonido); guardarOp(); }); yy += 17;
-  filaOpcion(g, x, yy, w, tr('idioma')); boton(g, cx, yy, cw, 14, null, () => abrirPanel('idioma'), { estilo: 'azul', dibujar: (g2, bx, by, bw, bh, Pb) => { icono(g2, 'globo', bx + 3, by + 2); txt(g2, nombreIdioma(), bx + 15, by + 3, { c: '#ffffff', b: Pb.bor, max: bw - 18 }); } }); yy += 18;
+  filaOpcion(g, x, yy, w, tr('idioma')); boton(g, cx, yy, cw, 14, null, () => abrirPanel('idioma'), { estilo: 'azul', dibujar: (g2, bx, by, bw, bh, Pb) => { icono(g2, 'globo', bx + 3, by + 2); const nom = nombreIdioma(), chico = esPx(mayus(nom), 'px') && anchoTxt(g2, nom) > bw - 18; txt(g2, nom, bx + 15, by + (chico ? 4 : 3), { c: '#ffffff', b: Pb.bor, max: bw - 18, f: chico ? 'mini' : 'px' }); } }); yy += 18;
   filaOpcion(g, x, yy, w, tr('controles')); boton(g, cx, yy, cw, 14, tr('controles'), () => abrirPanel('controles', { sel: 'minas' }), { estilo: 'piedra', icono: 'mano' }); yy += 18;
   const tres = (opts, val, fn) => { const bw = Math.floor((cw - (opts.length - 1) * 2) / opts.length); opts.forEach(([v, et], k) => boton(g, cx + k * (bw + 2), yy, bw, 14, et, () => fn(v), { estilo: val === v ? 'azul' : 'piedra', sel: val === v })); };
   filaOpcion(g, x, yy, w, tr('calidad')); tres([['auto', tr('auto')], ['alta', tr('alta')], ['baja', tr('baja')]], OP.calidad, v => { OP.calidad = v; CALIDAD = v === 'baja' ? 'baja' : 'alta'; guardarOp(); }); yy += 18;
@@ -717,6 +717,29 @@ function hudCarrera(g) {
   barra(g, W - 66, 6, 58, 6, f, f >= 1 ? '#ffd84a' : f >= 0.65 ? '#d0d8e8' : '#d8905a');
   for (const q of [MEDALLAS[0] / MEDALLAS[2], MEDALLAS[1] / MEDALLAS[2]]) rect(g, W - 66 + Math.round(58 * q), 5, 1, 8, '#ffffff');
   botonRedondo(g, W - 11, 30, 8, 'engranaje', () => confirmar(tr('abandonar'), () => { CARRERA.t = CARRERA.dur; }));
+}
+
+// ---------- después de la intro: elegir el idioma (el cartel pasa por los 13 idiomas) ----------
+function escenaIdioma(g) {
+  const tt = W >= 216 ? 3 : 2, yT = Math.round(H * 0.08);
+  g.fillStyle = 'rgba(10,6,4,0.45)'; g.fillRect(0, 0, W, H);
+  txt(g, 'FAMATINA', W / 2, yT, { t: tt, al: 0.5, c: ORO7, b: '#1a0a04', s: '#1a0a04', max: W - 6 });
+  const cods = IDIOMAS.map(l => l[0]), per = 1.6, i = Math.floor(T / per) % cods.length, k = (T % per) / per, a = Math.max(0, Math.min(1, k / 0.15, (1 - k) / 0.15));
+  const yP = yT + 7 * tt + 12, viejo = IDIOMA;
+  IDIOMA = cods[i]; g.globalAlpha = a; txt(g, ELEGI_IDIOMA[cods[i]], W / 2, yP, { al: 0.5, c: '#fff0d0', b: '#1a0a04', max: W - 10 }); g.globalAlpha = 1; IDIOMA = viejo;
+  const port = H > W * 1.2, cols = port ? 2 : 3, filas = Math.ceil(IDIOMAS.length / cols), gap = 4;
+  const y0 = yP + 18, bh = Math.max(14, Math.min(20, Math.floor((H - y0 - 10 - gap * (filas - 1)) / filas))), bw = Math.floor(Math.min(port ? 98 : 110, (W - 16 - gap * (cols - 1)) / cols));
+  const x0 = Math.round(W / 2 - (cols * bw + (cols - 1) * gap) / 2), resto = IDIOMAS.length % cols;
+  IDIOMAS.forEach(([cod, nom], j) => {
+    const f = Math.floor(j / cols), ultima = resto && f === filas - 1, sel = cod === IDIOMA;
+    const bx = x0 + (j % cols) * (bw + gap) + (ultima ? Math.round((cols - resto) * (bw + gap) / 2) : 0), by = y0 + f * (bh + gap);
+    boton(g, bx, by, bw, bh, null, () => elegirIdioma(cod), { estilo: sel ? 'oro' : 'piedra', sel, dibujar: (g2, x2, y2, w2, h2, Pb) => {
+      const v = IDIOMA; IDIOMA = cod;
+      const chico = esPx(mayus(nom), 'px') && anchoTxt(g2, nom) > w2 - 6;
+      txt(g2, nom, x2 + w2 / 2, y2 + Math.round((h2 - (chico ? 5 : 7)) / 2), { al: 0.5, c: Pb.txt, b: Pb.bor, max: w2 - 6, f: chico ? 'mini' : 'px' });
+      IDIOMA = v;
+    } });
+  });
 }
 
 // ---------- título ----------

@@ -20,7 +20,7 @@ function TIENE(i) { return !!(G && G.items[i]); }
 function DAR(i) { G.items[i] = 1; }
 function QUITAR(i) { delete G.items[i]; }
 function sacudir(a, t) { CAM.amp = Math.max(CAM.amp, a); CAM.temblor = Math.max(CAM.temblor, t); }
-function efecto(o) { if (EFECTOS.length > 400) EFECTOS.shift(); o.max = o.vida; EFECTOS.push(o); }
+function efecto(o) { if (EFECTOS.length > (OP && OP.calidad === 'baja' ? 120 : 240)) EFECTOS.shift(); o.max = o.vida; EFECTOS.push(o); }
 function polvo(x, y, n, c) { for (let k = 0; k < (n || 6); k++) efecto({ x: x + rnd(-0.2, 0.2), y: y + rnd(-0.1, 0.1), vx: rnd(-1.2, 1.2), vy: rnd(-0.8, 0.2), z: 0.1, vz: rnd(0.5, 1.5), vida: rnd(0.35, 0.7), c: c || '#e8dcc0', t: 'polvo', tam: rnd(0.08, 0.16) }); }
 function chispas(x, y, n, c) { for (let k = 0; k < (n || 8); k++) { const a = rnd(0, 6.28), v = rnd(2, 5); efecto({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, z: 0.4, vz: rnd(1, 3), vida: rnd(0.2, 0.45), c: c || '#fff2a0', t: 'chispa', tam: 0.06 }); } }
 function salpicar(x, y, n) { for (let k = 0; k < (n || 10); k++) { const a = rnd(0, 6.28), v = rnd(0.5, 2.2); efecto({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.6, z: 0, vz: rnd(2, 4), vida: rnd(0.4, 0.7), c: '#d8f0ff', t: 'gota', tam: rnd(0.05, 0.1) }); } efecto({ x, y, vida: 0.6, t: 'anillo', c: '#ffffff', tam: 0.2 }); }
@@ -60,7 +60,7 @@ class Nivel {
   flag(n) { return !!this.mem.f[n]; }
   setFlag(n, v) { this.mem.f[n] = v == null ? 1 : v; }
   tile(x, y) { x = Math.floor(x); y = Math.floor(y); return x < 0 || y < 0 || x >= this.w || y >= this.h ? 'T' : this.t[y][x]; }
-  setTile(x, y, c, persistir) { this.t[y][x] = c; this.sg = null; if (persistir !== false) this.mem.tiles[x + ',' + y] = c; }
+  setTile(x, y, c, persistir) { this.t[y][x] = c; this.sg = null; marcarSuelo(this, x, y); if (persistir !== false) this.mem.tiles[x + ',' + y] = c; }
   abierta(c, x, y) { if (c === 'D') return this.flag('p' + x + '_' + y); return this.flag('abre_' + PUERTAS[c]); }
   solido(x, y) {
     const c = this.tile(x, y);
@@ -570,13 +570,16 @@ function pasoMundo(dt) {
   if (!GU.lista && !dialogoAbierto() && !bannerAbierto()) for (const z of N.d.zonas) { const [x, y, w, h] = z.r; if (J.x >= x && J.x < x + w && J.y >= y && J.y < y + h && z.si(N)) { correr(z.g); break; } }
   pasoGuion(dt);
   camara(dt);
-  for (let i = EFECTOS.length - 1; i >= 0; i--) {
+  let vivos = 0;
+  for (let i = 0; i < EFECTOS.length; i++) {
     const f = EFECTOS[i];
     f.vida -= dt;
-    if (f.vida <= 0) { EFECTOS.splice(i, 1); continue; }
+    if (f.vida <= 0) continue;
     if (f.vx != null) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= 1 - dt * 2; f.vy *= 1 - dt * 2; }
     if (f.vz != null) { f.vz -= 9 * dt; f.z = Math.max(0, f.z + f.vz * dt); }
+    EFECTOS[vivos++] = f;
   }
+  EFECTOS.length = vivos;
   G.tiempo = (G.tiempo || 0) + dt;
 }
 function camara(dt) {

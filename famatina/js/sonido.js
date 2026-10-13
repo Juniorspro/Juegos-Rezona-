@@ -16,7 +16,10 @@ const Sonido = {
     this.mus = c.createGain(); this.mus.gain.value = 0; this.mus.connect(this.master);
     this.ef = c.createGain(); this.ef.gain.value = 0; this.ef.connect(this.master);
     const len = Math.floor(c.sampleRate * 2.6), ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    // la caída se calcula cada 64 muestras y se interpola (Math.pow por muestra trababa el primer toque)
+    const env = new Float32Array((len >> 6) + 2);
+    for (let j = 0; j < env.length; j++) env[j] = Math.pow(Math.max(0, 1 - j * 64 / len), 3.2);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) { const j = i >> 6, e = env[j] + (env[j + 1] - env[j]) * (i & 63) / 64; d[i] = (Math.random() * 2 - 1) * e; } }
     this.rev = c.createConvolver(); this.rev.buffer = ir;
     const wet = c.createGain(); wet.gain.value = 0.28; this.rev.connect(wet); wet.connect(this.master);
     this.envioRev = c.createGain(); this.envioRev.gain.value = 1; this.envioRev.connect(this.rev);
@@ -26,6 +29,24 @@ const Sonido = {
     this.volumen(this.vMus, this.vEf);
     this.prox = c.currentTime + 0.3;
     this.sonando = true;
+    this.precalentar();
+  },
+  // las cuerdas del charango de la mina se arman de a poco fuera del cuadro (armarlas al sonar el acorde trababa)
+  precalentar() {
+    const ctx = this.ctx, mina = this.mina, fs = [];
+    if (!ctx) return;
+    for (const [gr, tipo] of [[0, 'm'], [3, 'M'], [-2, 'M'], [-5, 'm']]) {
+      const raiz = this.raiz() * Math.pow(2, gr / 12) / 2;
+      for (const a of tipo === 'm' ? [0, 7, 12, 15, 19] : [0, 7, 12, 16, 19]) fs.push(raiz * 2 * Math.pow(2, a / 12));
+      fs.push(raiz);
+    }
+    const tanda = () => {
+      if (this.ctx !== ctx || this.mina !== mina) return;
+      const t0 = performance.now();
+      while (fs.length && performance.now() - t0 < 4) this.bufKS(fs.shift());
+      if (fs.length) setTimeout(tanda, 0);
+    };
+    setTimeout(tanda, 0);
   },
   volumen(m, e) {
     this.vMus = m; this.vEf = e;
@@ -170,9 +191,9 @@ const Sonido = {
     }
     return notas;
   },
-  musicaMina(k) { if (this.mina !== k) { this.mina = k; this.ks.clear(); this.frase = null; } },
+  musicaMina(k) { if (this.mina !== k) { this.mina = k; this.ks.clear(); this.frase = null; this.precalentar(); } },
   tic() {
-    if (!this.sonando || !this.ok()) return;
+    if (!this.sonando || !this.ok() || this.callar) return;
     const c = this.ctx, M = MINAS[this.mina].mus, sem = 60 / M.bpm / 4;   // semicorchea
     if (this.prox < c.currentTime - 0.2) this.prox = c.currentTime + 0.05;
     const prog = [[0, 'm'], [3, 'M'], [-2, 'M'], [0, 'm'], [0, 'm'], [3, 'M'], [-5, 'm'], [0, 'm']];
@@ -197,4 +218,4 @@ const Sonido = {
   },
 };
 let VIBRAR = true;
-function vibrar(ms) { if (VIBRAR && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
+function vibrar(ms) { if (!VIBRAR || !navigator.vibrate || (navigator.userActivation && !navigator.userActivation.hasBeenActive)) return; try { navigator.vibrate(ms); } catch (e) { } }

@@ -15,7 +15,7 @@ const Sonido = {
     this.master.connect(comp); comp.connect(hp); hp.connect(c.destination);
     this.mus = c.createGain(); this.mus.gain.value = 0; this.mus.connect(this.master);
     this.ef = c.createGain(); this.ef.gain.value = 0; this.ef.connect(this.master);
-    const len = Math.floor(c.sampleRate * 2.2), ir = c.createBuffer(2, len, c.sampleRate);
+    const len = Math.floor(c.sampleRate * 1.4), ir = c.createBuffer(2, len, c.sampleRate);   // reverb corta: la convolución larga traba celus flojos
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.4); }
     this.rev = c.createConvolver(); this.rev.buffer = ir;
     const wet = c.createGain(); wet.gain.value = 0.24; this.rev.connect(wet); wet.connect(this.master);
@@ -27,6 +27,17 @@ const Sonido = {
     this.prox = c.currentTime + 0.3;
     this.sonando = true;
     if (this.tema === 2) this.ambiente(true);
+    this.precalentar();
+  },
+  // las cuerdas de la guitarra (Karplus-Strong) se calculan de a poco al arrancar: sin picos cuando suena una nota nueva
+  precalentar() {
+    const fs = new Set();
+    for (const M of this.TEMAS) {
+      const grados = M.menor ? [[0, 'm'], [-2, 'M'], [-4, 'M'], [-5, 'M']] : [[0, 'M'], [7, 'M'], [5, 'M']];
+      for (const [gr, tipo] of grados) { const raiz = this.nota(M.raiz + gr - 12); for (const a of tipo === 'm' ? [0, 3, 7, 12] : [0, 4, 7, 12]) fs.add(raiz * 2 * Math.pow(2, a / 12)); }
+    }
+    const cola = [...fs], paso = () => { const t0 = performance.now(); while (cola.length && performance.now() - t0 < 4) this.bufKS(cola.shift()); if (cola.length) setTimeout(paso, 40); };
+    setTimeout(paso, 120);
   },
   volumen(m, e) {
     this.vMus = m; this.vEf = e;
@@ -202,4 +213,4 @@ const Sonido = {
   },
 };
 let VIBRAR = true;
-function vibrar(ms) { if (VIBRAR && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { } }
+function vibrar(ms) { if (!VIBRAR || !navigator.vibrate || (navigator.userActivation && !navigator.userActivation.hasBeenActive)) return; try { navigator.vibrate(ms); } catch (e) { } }

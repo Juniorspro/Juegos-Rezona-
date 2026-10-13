@@ -4,8 +4,14 @@ Guía = `GUIA-JUEGOS.md` (~40k tokens). Leer solo el tramo: `Read offset=<línea
 
 ## Reglas fijas (sección 0)
 1 HTML offline doble clic · 9:16 primero · bot juega cada modo + hoja de capturas · estilo propio y mejor que el
-anterior · controles de dedo editables · 13 idiomas sin cartel + globito · portada 9:16 · sin intro (salvo pedido)
-· lo chico rápido · números detrás · canciones ajenas fuera del repo · ports solo gratis · no instalar nada · Rezona > Higgsfield.
+anterior · controles de dedo editables · portada 9:16 · lo chico rápido · números detrás · canciones ajenas fuera del
+repo · ports solo gratis · no instalar nada · Rezona > Higgsfield.
+**Siempre (pedido del dueño, manda sobre la guía):** al abrir, intro JXSTUDIOS (`comun/intro-jxs.js` + un `ESTILO_<JUEGO>`
+en `js/intro.js` con fondo, monograma, letras y jingle del juego; toque la salta) → pantalla de idioma en cada arranque
+(13 idiomas, el aviso rota por idioma) → título; globito para cambiarlo después. `?prueba` la salta (`&intro` la muestra).
+**Sin lag:** medir con dibujo forzado (`getImageData` de 1 px por cuadro) y contar llamadas; lo quieto en caché/sellos,
+lo animado en un solo trazo, luces a ¼, nada de `splice` en bucles, cuerdas de audio armadas de a tandas, `vibrate` solo
+tras el primer toque.
 
 ## Tarea → líneas
 | tarea | líneas |
@@ -37,10 +43,12 @@ anterior · controles de dedo editables · 13 idiomas sin cartel + globito · po
 
 ## Estado del repo
 No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la guía.
-- `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, ui, juego);
-  `node famatina/armar.mjs` → `famatina.html` (un archivo, ~250 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
+- `comun/intro-jxs.js`: la intro JXSTUDIOS compartida (`IntroJXS.crear({W,H,presenta,vibrar,estilo})`, `jingle`,
+  `ELEGI_IDIOMA` y `PRESENTA` en 13 idiomas). Cada `juego.json` la incluye como `../comun/intro-jxs.js` antes de `js/intro.js`.
+- `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
+  `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.
 - `camalote/`: aventura vista desde arriba (tipo Zelda) en vectorial, 3 capítulos con jefes, puzzles, diálogos y 9 figuritas.
-  Fuente en `js/` (base, idiomas 1-3, texto, arte, mapas, mundo, sonido, ui, juego); `node camalote/armar.mjs` →
-  `camalote.html` (~360 KB). Mapas, guiones, láminas y rutas del bot en `js/mapas.js`. Prueba: `?prueba` y
+  Fuente en `js/` (base, idiomas 1-3, texto, arte, mapas, mundo, sonido, intro, ui, juego); `node camalote/armar.mjs` →
+  `camalote.html` (~390 KB). Suelo en trozos de 8×8 cacheados, K cuantizado a TS, calidad alta/media/baja (celu: media). Mapas, guiones, láminas y rutas del bot en `js/mapas.js`. Prueba: `?prueba` y
   `window.__juego` (`bot` inmortal que sigue `RUTAS`, `capitulo(n)`, `simular(seg)`, `medirAudio`); `?portada`.

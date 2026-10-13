@@ -37,14 +37,17 @@ function explosionEn(x, y, col) {
 }
 let LUCES_EXTRA = [];
 function pasoParticulas(dt) {
-  for (let i = PART.length - 1; i >= 0; i--) {
+  let vivas = 0;   // se compacta en una pasada (splice dentro del bucle era cuadrático en las explosiones)
+  for (let i = 0; i < PART.length; i++) {
     const p = PART[i];
     p.vida -= dt;
-    if (p.vida <= 0) { PART.splice(i, 1); continue; }
+    if (p.vida <= 0) continue;
     p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
     if (p.t === 'humo' || p.t === 'polvo') { p.vx *= 1 - dt * 0.8; }
     if (p.suelo != null && p.y > p.suelo) { p.y = p.suelo; p.vy *= -0.3; p.vx *= 0.5; }
+    PART[vivas++] = p;
   }
+  PART.length = vivas;
   for (let i = LUCES_EXTRA.length - 1; i >= 0; i--) { LUCES_EXTRA[i].vida -= dt; if (LUCES_EXTRA[i].vida <= 0) LUCES_EXTRA.splice(i, 1); }
   if (SAC.t > 0) SAC.t -= dt;
 }
@@ -328,12 +331,12 @@ function dibujarMundo(m, t) {
   for (const l of LUCES) {
     if (l.y < -40 || l.y > H + 40) continue;
     if (l.cono) L.drawImage(spriteCono(l.c, l.r, l.cono), l.cono > 0 ? Math.round(l.x) : Math.round(l.x - l.r * 2), Math.round(l.y - l.r / 2));
-    else { const r = Math.round(l.r); L.drawImage(spriteLuz(l.c, r), Math.round(l.x - r), Math.round(l.y - r)); }
+    else { const s = spriteLuz(l.c, l.r); L.drawImage(s, Math.round(l.x - s.width / 2), Math.round(l.y - s.height / 2)); }
   }
   g.globalCompositeOperation = 'multiply';
   g.drawImage(luzCv, 0, 0);
   g.globalCompositeOperation = 'lighter';
-  if (CALIDAD !== 'baja') for (const b of BRILLOS) { if (b.y < -30 || b.y > H + 30) continue; g.globalAlpha = clamp(b.a == null ? 0.6 : b.a, 0, 1); const r = Math.round(b.r); g.drawImage(spriteLuz(b.c, r), Math.round(b.x - r), Math.round(b.y - r)); }
+  if (CALIDAD !== 'baja') for (const b of BRILLOS) { if (b.y < -30 || b.y > H + 30) continue; g.globalAlpha = clamp(b.a == null ? 0.6 : b.a, 0, 1); const s = spriteLuz(b.c, b.r); g.drawImage(s, Math.round(b.x - s.width / 2), Math.round(b.y - s.height / 2)); }
   g.globalAlpha = 1;
   g.globalCompositeOperation = 'source-over';
   dibujarParticulas(g, cam, true);
