@@ -54,6 +54,16 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   (cajas con poses), jugador (escalón, borde, trepar con plumas, planear, aletear), vida, historia, sonido, intro, ui,
   bot (A* sobre cubos + guion entero), juego. `node siete-colores/armar.mjs` → `siete-colores.html` (~340 KB).
   Prueba: `?prueba`, `window.__juego` (`nueva()`, `bot=true`, `paso(n,dib)`, `ir()`, `traza()`); `?portada`.
+- `potrero/`: fútbol 5 de barrio en 3D estilo historieta (WebGL2 propio: luz en bandas, trama de puntos, tinta por
+  profundidad/normal/identidad, papel). Historia de 6 partidos contada en páginas de historieta con viñetas 3D y globos
+  (Brizuela quiere un estacionamiento en el potrero), picado, penales (racha con 3 vidas) y desafío del día con semilla.
+  `js/`: base, idiomas 1-4, letras (letra de historieta a mano con acentos; árabe/urdu/tailandés/birmano/japonés con la
+  del sistema), gl, ui, sonido (cumbia, hinchada, relator con formantes), render, modelos (pibes con 13 huesos y 10 gestos
+  de cara, pelota, poses), canchas (6, con charcos/tren/noche/viento/estadio), equipos, futbol (física de pelota,
+  pase/tiro cargado/gambeta/barrida/cabezazo, arquero, aguante y especiales, repetición), ia, partido (fases, cámara,
+  HUD, penales), comic, historia, intro, juego. `node potrero/armar.mjs` → `potrero.html` (~420 KB).
+  Prueba: `?prueba` (`&sinpres`, `&sinrep`), `window.__juego` (`bot=true`, `capitulo(i)`, `picado({...})`, `penales()`,
+  `desafio()`, `comicDe(n)`, `paso(n,dib)`, `estado()`); `?portada`.
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

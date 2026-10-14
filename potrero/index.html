@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#16131f">
+<title>POTRERO</title>
+<style>
+html,body{margin:0;height:100%;background:#16131f;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior:none}
+canvas{position:absolute;left:0;top:0;touch-action:none;outline:none}
+#gl{background:#16131f}
+#carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#ffd23f;color:#16131f;font:900 46px Impact,'Arial Black',sans-serif;letter-spacing:3px}
+#carga b{transform:rotate(-4deg);text-shadow:4px 4px 0 #16131f;color:#fff;-webkit-text-stroke:2px #16131f}
+#carga small{font:14px sans-serif;margin-top:18px;letter-spacing:0;opacity:0;transition:opacity .6s}
+</style>
+</head>
+<body>
+<div id="carga"><b>POTRERO</b><small id="aviso">Si no carga, abrilo con Chrome o Safari.</small></div>
+<noscript><div style="position:absolute;inset:0;background:#16131f;color:#fff;font:18px sans-serif;display:flex;align-items:center;justify-content:center">Este juego necesita JavaScript.</div></noscript>
+<canvas id="gl"></canvas>
+<canvas id="ui"></canvas>
+<script>setTimeout(function(){var a=document.getElementById('aviso');if(a)a.style.opacity=1},7000)</script>
+<!--JS-->
+</body>
+</html>
