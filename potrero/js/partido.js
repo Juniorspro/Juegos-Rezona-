@@ -3,6 +3,8 @@
 // el que manejás, onomatopeyas, el especial).
 const CAMP = { x: 0, y: 14, z: 20, tx: 0, ty: 0, tz: 0, ok: false };
 function empezarPartido(cfg) {
+  // el picado de fondo del menú lo juega la IA sola; un partido de verdad lo manejás vos
+  if (!cfg.demo) { BOT_TODO = BOT; DEMO = null; }
   nuevoPartido(cfg);
   Sonido.musica(P.C.gente > 0.5 ? 2 : -1); Sonido.hinchadaVol = P.C.gente;
   CAMP.ok = false;

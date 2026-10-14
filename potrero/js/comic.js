@@ -131,10 +131,11 @@ function dibujarComic2D(g) {
   // número de página, saltar, y "tocá"
   txt(g, (C.p + 1) + ' / ' + C.paginas.length, W - 16, H - 22, { tam: 10, c: TINTA, b: null, al: 1 });
   if (C.titulo) cartucho(g, 12, 12, tr(C.titulo), { tam: 12, c: ROJO, tc: BLANCO, max: W - 120 });
+  // tocar en cualquier lado avanza; el botón SALTAR va encima (se agrega después, así gana el toque)
+  zona(0, 0, W, H, () => avanzarComic());
   boton(g, W - 92, 8, 82, 26, tr('saltar'), () => terminarComic(), { tam: 10.5, sombra: 2.5, ic: 'flechaDer', it: 11 });
   const ult = C.p === C.paginas.length - 1 && C.panel === pg.paneles.length - 1;
   if (C.tPanel > 1.2 && Math.sin(T * 5) > -0.2) txt(g, tr(ult ? 'tocaSeguir' : 'toca'), W / 2, H - 22, { tam: 10.5, c: TINTA, b: PAPEL, al: 0.5 });
-  zona(0, 0, W, H, () => avanzarComic());
   // vuelta de página
   if (C.voltea > 0) { const k = C.voltea; g.fillStyle = PAPEL; g.beginPath(); g.moveTo(W, 0); g.lineTo(W - W * k * 1.3, 0); g.lineTo(W, H * k * 1.3); g.closePath(); g.fill(); g.lineWidth = 2.5; g.strokeStyle = TINTA; g.stroke(); }
 }

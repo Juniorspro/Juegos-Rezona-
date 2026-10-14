@@ -90,6 +90,8 @@ function prepararEntrada() {
     Sonido.iniciar(); Sonido.volumen(OP.musica, OP.sonido);
     if (e.pointerType === 'touch' || e.pointerType === 'pen') TACTIL = true;
     const p = aLog(e), z = zonaEn(ZONAS_PREV, p.x, p.y);
+    // en la compu, si tocás la cancha con el mouse aparecen los botones en pantalla (también se juega con el mouse)
+    if (!TACTIL && enPartidoLibre() && (!z || z.w >= W - 1)) TACTIL = true;
     const ptr = { id: e.pointerId, x: p.x, y: p.y, x0: p.x, y0: p.y, arr: false, rol: 'ui', zona: z };
     const ed = PANEL && PANEL.tipo === 'controles';
     if (ed && (!z || z.fn === null || (z.op && !z.op.drag && z.w >= W - 1))) {
