@@ -1,0 +1,77 @@
+// SIETE COLORES — WebGL2 sin librerías: programas, búferes, texturas y destinos de dibujo
+let gl = null;
+const GL = {
+  ok: false, perdido: false,
+  iniciar(cv) {
+    try { gl = cv.getContext('webgl2', { antialias: false, alpha: false, depth: true, stencil: false, preserveDrawingBuffer: !!PRUEBA, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
+    if (!gl) return false;
+    cv.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.perdido = true; }, false);
+    cv.addEventListener('webglcontextrestored', () => location.reload(), false);
+    this.ok = true;
+    return true;
+  },
+  programa(vs, fs, nombre) {
+    const sh = (tipo, src) => {
+      const s = gl.createShader(tipo); gl.shaderSource(s, '#version 300 es\nprecision highp float;\nprecision highp int;\nprecision highp sampler2DShadow;\n' + src); gl.compileShader(s);
+      return s;
+    };
+    const v = sh(gl.VERTEX_SHADER, vs), f = sh(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
+    gl.attachShader(p, v); gl.attachShader(p, f); gl.linkProgram(p);
+    // los errores se miran recién al usarlo (compilar en paralelo donde se pueda)
+    const P = { p, u: {}, nombre, v, f, listo: false };
+    return P;
+  },
+  revisar(P) {
+    if (P.listo) return;
+    if (!gl.getProgramParameter(P.p, gl.LINK_STATUS)) {
+      const err = (gl.getShaderInfoLog(P.v) || '') + (gl.getShaderInfoLog(P.f) || '') + (gl.getProgramInfoLog(P.p) || '');
+      throw new Error('shader ' + P.nombre + ': ' + err.slice(0, 400));
+    }
+    const n = gl.getProgramParameter(P.p, gl.ACTIVE_UNIFORMS);
+    for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(P.p, i), nom = a.name.replace(/\[0\]$/, ''); P.u[nom] = gl.getUniformLocation(P.p, a.name); }
+    P.listo = true;
+  },
+  usar(P) { this.revisar(P); gl.useProgram(P.p); return P.u; },
+  textura(w, h, interno, formato, tipo, filtro, datos) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, interno, w, h, 0, formato, tipo, datos || null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filtro || gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filtro || gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  },
+  texturaLienzo(cv) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cv);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  },
+  // destino de la escena: color + normal (MRT) + profundidad como textura
+  destinoEscena(w, h) {
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    const col = this.textura(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE), nor = this.textura(w, h, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE);
+    const prof = this.textura(w, h, gl.DEPTH_COMPONENT24, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, col, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, nor, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, prof, 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fb, col, nor, prof, w, h, ok };
+  },
+  destinoSombra(n) {
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.DEPTH_COMPONENT24, n, n);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_MODE, gl.COMPARE_REF_TO_TEXTURE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_COMPARE_FUNC, gl.LEQUAL);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, t, 0);
+    gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return { fb, t, n, ok };
+  },
+  borrar(d) { if (!d) return; for (const k of ['col', 'nor', 'prof', 't']) if (d[k]) gl.deleteTexture(d[k]); if (d.fb) gl.deleteFramebuffer(d.fb); },
+};

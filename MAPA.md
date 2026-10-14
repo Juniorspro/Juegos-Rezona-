@@ -45,6 +45,15 @@ tras el primer toque.
 No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la guía.
 - `comun/intro-jxs.js`: la intro JXSTUDIOS compartida (`IntroJXS.crear({W,H,presenta,vibrar,estilo})`, `jingle`,
   `ELEGI_IDIOMA` y `PRESENTA` en 13 idiomas). Cada `juego.json` la incluye como `../comun/intro-jxs.js` antes de `js/intro.js`.
+- `comun/fuente-px.js`: la letra de píxeles (5×7 y 3×5, acentos, letra del sistema para lo que no tiene); la usan
+  FAMATINA y SIETE COLORES.
+- `siete-colores/`: aventura 3D en pixel art (cubos de 1 m, WebGL2 propio, sin librerías) en la Quebrada de Humahuaca:
+  Killa recupera 7 colores del cerro (7 desafíos, 10 plumas, final de carnaval). `js/`: base, idiomas 1-3, gl, mundo
+  (armado con semilla, 192×64×192), malla (trozos 32×64×32 con oclusión), render (sombra fija del terreno + chica de
+  muñecos, escena a la resolución del juego con color+normal+profundidad, contorno de tinta, tramado, ACES), personajes
+  (cajas con poses), jugador (escalón, borde, trepar con plumas, planear, aletear), vida, historia, sonido, intro, ui,
+  bot (A* sobre cubos + guion entero), juego. `node siete-colores/armar.mjs` → `siete-colores.html` (~340 KB).
+  Prueba: `?prueba`, `window.__juego` (`nueva()`, `bot=true`, `paso(n,dib)`, `ir()`, `traza()`); `?portada`.
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

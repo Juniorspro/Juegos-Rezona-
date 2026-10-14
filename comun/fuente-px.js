@@ -1,4 +1,4 @@
-// FAMATINA — letras: "px" 5×7 con acentos arriba y cedilla abajo, "mini" 3×5; lo que no tienen, letra del sistema
+// letras de píxeles compartidas: "px" 5×7 con acentos arriba y cedilla abajo, "mini" 3×5; lo que no tienen, letra del sistema
 const F5 = {
   A: [5, 14, 17, 17, 31, 17, 17, 17], B: [5, 30, 17, 17, 30, 17, 17, 30], C: [5, 14, 17, 16, 16, 16, 17, 14], D: [5, 30, 17, 17, 17, 17, 17, 30],
   E: [5, 31, 16, 16, 30, 16, 16, 31], F: [5, 31, 16, 16, 30, 16, 16, 16], G: [5, 14, 17, 16, 23, 17, 17, 15], H: [5, 17, 17, 17, 31, 17, 17, 17],

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2a1830">
+<title>SIETE COLORES</title>
+<style>
+html,body{margin:0;height:100%;background:#1c1226;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior:none}
+canvas{position:absolute;left:0;top:0;touch-action:none;outline:none;image-rendering:pixelated;image-rendering:crisp-edges}
+#gl{background:#1c1226}
+#carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff0d8;font:700 30px 'Courier New',monospace;letter-spacing:4px;background:#1c1226}
+#carga b{display:flex;gap:3px}#carga b i{font-style:normal}
+#carga small{color:#cdb8d8;font:13px sans-serif;margin-top:16px;letter-spacing:0;opacity:0;transition:opacity .6s}
+</style>
+</head>
+<body>
+<div id="carga"><b><i style="color:#e04a3a">S</i><i style="color:#f08a3a">I</i><i style="color:#f0c84a">E</i><i style="color:#6ab85a">T</i><i style="color:#3ac0b8">E</i></b><b><i style="color:#a060d0">C</i><i style="color:#f090b0">O</i><i>L</i><i>O</i><i>R</i><i>E</i><i>S</i></b><small id="aviso">Si no carga, abrilo con Chrome o Safari.</small></div>
+<noscript><div style="position:absolute;inset:0;background:#1c1226;color:#fff;font:18px sans-serif;display:flex;align-items:center;justify-content:center">Este juego necesita JavaScript.</div></noscript>
+<canvas id="gl"></canvas>
+<canvas id="ui"></canvas>
+<script>setTimeout(function(){var a=document.getElementById('aviso');if(a)a.style.opacity=1},7000)</script>
+<!--JS-->
+</body>
+</html>

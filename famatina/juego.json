@@ -1,1 +1,1 @@
-{"salida": "famatina.html", "js": ["js/base.js", "js/idiomas.js", "js/fuente.js", "js/arte.js", "js/eco.js", "js/sonido.js", "js/mundo.js", "../comun/intro-jxs.js", "js/intro.js", "js/ui.js", "js/juego.js"]}
+{"salida": "famatina.html", "js": ["js/base.js", "js/idiomas.js", "../comun/fuente-px.js", "js/arte.js", "js/eco.js", "js/sonido.js", "js/mundo.js", "../comun/intro-jxs.js", "js/intro.js", "js/ui.js", "js/juego.js"]}
