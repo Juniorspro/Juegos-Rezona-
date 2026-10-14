@@ -45,6 +45,9 @@ tras el primer toque.
 No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la guía.
 - `comun/intro-jxs.js`: la intro JXSTUDIOS compartida (`IntroJXS.crear({W,H,presenta,vibrar,estilo})`, `jingle`,
   `ELEGI_IDIOMA` y `PRESENTA` en 13 idiomas). Cada `juego.json` la incluye como `../comun/intro-jxs.js` antes de `js/intro.js`.
+- Portadas `<juego>/portada-<juego>.jpg` (1080×1920): arte Higgsfield `nano_banana_2` 2k + título con la letra de cada
+  juego, subtítulo y moneda JXS (el monograma de la intro) compuestos en un lienzo de Chromium (compositor fuera del
+  repo). `?portada` arma la vieja, del motor.
 - `comun/fuente-px.js`: la letra de píxeles (5×7 y 3×5, acentos, letra del sistema para lo que no tiene); la usan
   FAMATINA y SIETE COLORES.
 - `siete-colores/`: aventura 3D en pixel art (cubos de 1 m, WebGL2 propio, sin librerías) en la Quebrada de Humahuaca:
