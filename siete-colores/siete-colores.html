@@ -2778,7 +2778,7 @@ function decir(lineas, fin, o) {
 function avanzarDialogo() {
   const D = DLG;
   if (!D) return;
-  const txt = tr(D.lineas[D.i][1]);
+  const txt = tr(D.lineas[D.i][1], D.arg);
   if (D.letras < txt.length) { D.letras = txt.length; return; }
   if (D.i < D.lineas.length - 1) { D.i++; D.t = 0; D.letras = 0; Sonido.dialogo(); return; }
   DLG = null;
@@ -2826,13 +2826,15 @@ function hablarCon(e) {
       if (G.colores[2]) decir([['tomas', 't_5']]);
       else if (!f.amarilloIni) decir([['tomas', 't_1'], ['tomas', 't_2'], ['killa', 'k_dale']], () => { f.amarilloIni = 1; mision(2); guardar(); });
       else if (Object.keys(G.chicos).length >= 3) decir([['tomas', 't_4']], () => darColor(2, e));
-      else decir([['tomas', tr('t_3', 3 - Object.keys(G.chicos).length) ? 't_3' : 't_3']], null, { arg: 3 - Object.keys(G.chicos).length });
+      else decir([['tomas', 't_3']], null, { arg: 3 - Object.keys(G.chicos).length });
       break;
     case 'lucia': case 'pedro': case 'rosa':
       if (e.escondido && f.amarilloIni) {
-        decir([[e.id, 'e_' + e.id]], () => { G.chicos[e.id] = 1; e.escondido = false; e.volver = { lucia: [101.5, 120.5], pedro: [104.5, 119.5], rosa: [102.5, 117.5] }[e.id]; Sonido.encontrado(); guardar(); if (Object.keys(G.chicos).length >= 3) ayudaObj('o_volverTomas'); });
+        const faltan = 2 - Object.keys(G.chicos).length;
+        decir([[e.id, 'e_' + e.id], [e.id, faltan > 0 ? 't_3' : 'e_espera']], () => { G.chicos[e.id] = 1; e.escondido = false; e.volver = { lucia: [101.5, 120.5], pedro: [104.5, 119.5], rosa: [102.5, 117.5] }[e.id]; Sonido.encontrado(); guardar(); if (Object.keys(G.chicos).length >= 3) ayudaObj('o_volverTomas'); }, { arg: faltan });
       } else if (e.escondido) decir([[e.id, 'e_shh']]);
-      else decir([[e.id, G.colores[2] ? 'e_gracias' : 'e_espera']]);
+      else if (G.colores[2] || Object.keys(G.chicos).length >= 3) decir([[e.id, G.colores[2] ? 'e_gracias' : 'e_espera']]);
+      else decir([[e.id, 't_3']], null, { arg: 3 - Object.keys(G.chicos).length });
       break;
     case 'fermin':
       if (f.verde) decir([['fermin', 'f_5']]);
