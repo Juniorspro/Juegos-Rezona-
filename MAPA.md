@@ -64,6 +64,18 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   HUD, penales), comic, historia, intro, juego. `node potrero/armar.mjs` → `potrero.html` (~420 KB).
   Prueba: `?prueba` (`&sinpres`, `&sinrep`), `window.__juego` (`bot=true`, `capitulo(i)`, `picado({...})`, `penales()`,
   `desafio()`, `comicDe(n)`, `paso(n,dib)`, `estado()`); `?portada`.
+- `hojalata/`: carreras de autitos de lata a cuerda por la casa, en 3D (WebGL2 propio: lata con brillo GGX y reflejo
+  de la pieza con la ventana, sombras fija + chica, brillo en cadena, foco corto de miniatura, ACES). Historia de 6
+  carreras (Chispa contra Turbo Max por la vidriera del Día del Niño) con escenas actuadas por los autitos, carrera
+  rápida, contrarreloj con fantasma y desafío del día. Física en coordenadas de pista (s, d, rumbo): derrape con
+  miniturbo, la cuerda que se carga derrapando y se suelta como turbo, largada dándole cuerda, saltos/huecos, caídas con
+  grúa, ítems (canica, botón, resorte, llave dorada, pompa). `js/`: base, idiomas 1-4, letras, gl, geo (armador de
+  mallas, torno, tubos, trozos con caja), ui (chapa esmaltada, persiana), sonido (vals de cajita, polka de organito,
+  motor de cuerda), render, juguetes (6 autitos con conductor y caras), pistas (curva y malla de chapa), casa (atlas,
+  utilería y las 6 pistas con su luz), carrera, hud, historia, intro, juego. `node hojalata/armar.mjs` →
+  `hojalata.html` (~400 KB). Prueba: `?prueba` (`&todo` abre todo), `window.__juego` (`bot=true`, `capitulo(i)`,
+  `rapida({pista,pj})`, `contra()`, `desafio()`, `escenaDe(i)`, `vista(pista,cam)`, `paso(n,dib)`, `medir(n)`,
+  `estado()`); `?portada`.
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

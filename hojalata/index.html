@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1a2e">
+<title>HOJALATA</title>
+<style>
+html,body{margin:0;height:100%;background:#1b1a2e;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overscroll-behavior:none}
+canvas{position:absolute;left:0;top:0;touch-action:none;outline:none}
+#gl{background:#1b1a2e}
+#carga{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#d8352a;color:#f6e7c6;font:900 44px 'Arial Black',Impact,sans-serif;letter-spacing:4px}
+#carga b{padding:6px 18px;border:4px solid #c9ced8;border-radius:14px;background:#1f4fa8;box-shadow:0 6px 0 #1b1a2e}
+#carga small{font:14px sans-serif;margin-top:22px;letter-spacing:0;opacity:0;transition:opacity .6s}
+</style>
+</head>
+<body>
+<div id="carga"><b>HOJALATA</b><small id="aviso">Si no carga, abrilo con Chrome o Safari.</small></div>
+<noscript><div style="position:absolute;inset:0;background:#1b1a2e;color:#fff;font:18px sans-serif;display:flex;align-items:center;justify-content:center">Este juego necesita JavaScript.</div></noscript>
+<canvas id="gl"></canvas>
+<canvas id="ui"></canvas>
+<script>setTimeout(function(){var a=document.getElementById('aviso');if(a)a.style.opacity=1},7000)</script>
+<!--JS-->
+</body>
+</html>
