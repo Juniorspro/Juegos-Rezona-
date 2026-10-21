@@ -99,6 +99,10 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   El bot termina la mansión en ~10 min de juego.
 - **TikTok Minis:** desde el 28/8/2026 no acepta juegos HTML (solo runtime nativo: `game.js`, `game.json`,
   `project.config.json`; 4 MB el paquete principal). Para un juego nuestro, copiar el adaptador de `mansion-builder`.
+  Ficha: ícono 1024×1024 (sin bordes redondeados) y hasta 3 miniaturas de DM 360×360.
+- `mansion-builder/arte-tiktok/`: arte Higgsfield para publicar (`gpt_image_2_5` con la portada de referencia):
+  `icono-1024.png` (+ `icono-600.png`, `icono-alt-1024.png`), `logo.png` y `logo-alt.png` transparentes, 3
+  `miniatura-*.png` de DM, `banner-1920x1080.jpg` e `iconos/` (24 íconos de interfaz 256×256, todavía no usados en el juego).
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.
