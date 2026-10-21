@@ -112,3 +112,7 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   Fuente en `js/` (base, idiomas 1-3, texto, arte, mapas, mundo, sonido, intro, ui, juego); `node camalote/armar.mjs` →
   `camalote.html` (~390 KB). Suelo en trozos de 8×8 cacheados, K cuantizado a TS, calidad alta/media/baja (celu: media). Mapas, guiones, láminas y rutas del bot en `js/mapas.js`. Prueba: `?prueba` y
   `window.__juego` (`bot` inmortal que sigue `RUTAS`, `capitulo(n)`, `simular(seg)`, `medirAudio`); `?portada`.
+- `eclipse-blade/`: aparte de los juegos. Noob R6 con la espada "Eclipse Blade", 15 s de animación. `escena.py`
+  (Blender 4.2.3: escena, coreografía con easings, VFX, cámara, render Cycles; necesita `baseplate.png` al lado) →
+  `escena.blend`, `escena.glb`, `claves.json`; `animacion.mp4` (render 1280×720). `armar.py` junta `plantilla.html` +
+  GLB + claves en `eclipse-blade.html` (Three.js por CDN, timeline tipo Eclipse Animator, bloom, flash/shake).
