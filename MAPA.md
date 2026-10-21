@@ -44,7 +44,7 @@ tras el primer toque.
 ## Estado del repo
 No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la guía.
 - `comun/intro-jxs.js`: la intro JXSTUDIOS compartida (`IntroJXS.crear({W,H,presenta,vibrar,estilo})`, `jingle`,
-  `ELEGI_IDIOMA` y `PRESENTA` en 13 idiomas). Cada `juego.json` la incluye como `../comun/intro-jxs.js` antes de `js/intro.js`.
+  `ELEGI_IDIOMA` y `PRESENTA` en 13 idiomas + `vi`). Cada `juego.json` la incluye como `../comun/intro-jxs.js` antes de `js/intro.js`.
 - Portadas `<juego>/portada-<juego>.jpg` (1080×1920): arte Higgsfield `nano_banana_2` 2k + título con la letra de cada
   juego, subtítulo y moneda JXS (el monograma de la intro) compuestos en un lienzo de Chromium (compositor fuera del
   repo). `?portada` arma la vieja, del motor.
@@ -79,6 +79,19 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   `hojalata.html` (~400 KB). Prueba: `?prueba` (`&todo` abre todo), `window.__juego` (`bot=true`, `capitulo(i)`,
   `rapida({pista,pj})`, `contra()`, `desafio()`, `escenaDe(i)`, `vista(pista,cam)`, `paso(n,dib)`, `medir(n)`,
   `estado()`); `?portada`.
+- `mansion-builder/`: MANSION BUILDER, idle-arcade de levantar una mansión de bloques (estilo Minecraft) en una isla, vista
+  3/4 de costado-arriba (WebGL2 propio: trozos 16×16 en una pasada con AO, sombra fija del sol, nubes, agua viva, vidrio,
+  calcas del piso, cubos e instancias, silueta del jugador tapado). Se juntan bloques de 5 máquinas (madera, piedra,
+  vidrio, mármol, oro) y se llevan a la obra; 13 partes se arman solas con bloques que vuelan; los visitantes pagan en la
+  caja; cuadros para desbloquear/mejorar (máquinas, mochila, zapatillas, 3 ayudantes con A*); premio diario, plata
+  offline, compartir. **4 idiomas (en/es/pt/vi) por el país de la IP, sin pantalla de idioma** (pedido del dueño; se
+  cambia en ajustes). Gráficos 0-3 según GPU y FPS. Música y efectos de Higgsfield (`sonilo_music`/`mirelo`, recortados
+  con ffmpeg) en `audio/`, letra Bungee en `fuente/`: `armar.mjs` los mete en base64. Balance en `ECO` (`js/mansion.js`).
+  `js/`: base, idiomas, gl, texturas, bloques, mundo, malla, render, personajes, mansion, sonido, juego, escena, ui,
+  carga, intro, principal. `node mansion-builder/armar.mjs` → `mansion-builder.html` (~1,1 MB). Prueba: `?prueba`
+  (`&intro`), `window.__juego` (`bot=true`, `paso(n,dib)`, `completar(k)`, `dar(n)`, `calidad(n)`, `idioma(l)`,
+  `panel(p)`, `ir(x,z)`, `camara(o)`, `borrar()`, `medir(n)`, `stats()`, `ev(s)` solo con `?prueba`). El bot la termina
+  en ~23 min de juego.
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

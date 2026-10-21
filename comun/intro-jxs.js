@@ -196,4 +196,4 @@ const IntroJXS = (() => {
 })();
 // "elegí tu idioma" en cada idioma (la pantalla que va después de la intro) y "presenta"
 const ELEGI_IDIOMA = { es: 'ELEGÍ TU IDIOMA', 'es-MX': 'ELIGE TU IDIOMA', en: 'CHOOSE YOUR LANGUAGE', pt: 'ESCOLHA SEU IDIOMA', ar: 'اختر لغتك', id: 'PILIH BAHASAMU', ms: 'PILIH BAHASA ANDA', fil: 'PUMILI NG WIKA', tr: 'DİLİNİ SEÇ', ur: 'اپنی زبان چنیں', th: 'เลือกภาษาของคุณ', my: 'ဘာသာစကား ရွေးပါ', ja: 'ことばをえらんでね' };
-const PRESENTA = { es: 'presenta', 'es-MX': 'presenta', en: 'presents', pt: 'apresenta', ar: 'تقدّم', id: 'mempersembahkan', ms: 'mempersembahkan', fil: 'naghahandog', tr: 'sunar', ur: 'پیش کرتا ہے', th: 'นำเสนอ', my: 'တင်ဆက်သည်', ja: 'プレゼンツ' };
+const PRESENTA = { vi: 'trân trọng giới thiệu', es: 'presenta', 'es-MX': 'presenta', en: 'presents', pt: 'apresenta', ar: 'تقدّم', id: 'mempersembahkan', ms: 'mempersembahkan', fil: 'naghahandog', tr: 'sunar', ur: 'پیش کرتا ہے', th: 'นำเสนอ', my: 'တင်ဆက်သည်', ja: 'プレゼンツ' };

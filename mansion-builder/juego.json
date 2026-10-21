@@ -1,0 +1,1 @@
+{"salida": "mansion-builder.html", "js": ["js/base.js", "js/idiomas.js", "js/gl.js", "js/texturas.js", "js/bloques.js", "js/mundo.js", "js/malla.js", "js/render.js", "js/personajes.js", "js/mansion.js", "js/sonido.js", "js/juego.js", "js/escena.js", "js/ui.js", "js/carga.js", "../comun/intro-jxs.js", "js/intro.js", "js/principal.js"]}
