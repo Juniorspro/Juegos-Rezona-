@@ -17,8 +17,8 @@ const DECOS = [
   { id: 'faro', plata: 12000, icono: 'LAMPARA' }, { id: 'globo', gemas: 100, icono: 'LANA_AMARILLA' },
 ];
 const BOOSTS = [
-  { id: 'x2', dura: 300, gemas: 12, icono: 'ORO' }, { id: 'vel', dura: 180, gemas: 6, icono: 'LANA_CELESTE' }, { id: 'iman', dura: 300, gemas: 8, icono: 'HIERRO' },
-  { id: 'llenar', gemas: 5, icono: 'CAJA' }, { id: 'pack', gemas: 25, icono: 'BILLETE' }, { id: 'gemasAd', icono: 'CRISTAL_AZUL' },
+  { id: 'x2', dura: 300, gemas: 12, icono: 'ORO', img: 'rayo' }, { id: 'vel', dura: 180, gemas: 6, icono: 'LANA_CELESTE', img: 'reloj' }, { id: 'iman', dura: 300, gemas: 8, icono: 'HIERRO' },
+  { id: 'llenar', gemas: 5, icono: 'CAJA' }, { id: 'pack', gemas: 25, icono: 'BILLETE', img: 'moneda' }, { id: 'gemasAd', icono: 'CRISTAL_AZUL', img: 'gema' },
 ];
 // una "unidad" de plata: lo que dejan los visitantes en un minuto según cuánto va de la mansión (premios que escalan)
 function unidadPlata() { const n = clamp(G.parte, 1, PARTES.length), e = ECO.visita(n); return Math.max(25, Math.round(e.paga / e.cada * 60 / 5) * 5); }
@@ -206,7 +206,7 @@ function panelTienda(g, t) {
   botonCerrar(g, x + w - 44 * U, y + 9 * U);
   monedasPanel(g, x + w / 2, y + 54 * U);
   const tabs = ['trajes', 'mascotas', 'decos', 'boosts'];
-  pestanas(g, x + 10 * U, y + 72 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(TIENDA.pestana), i => { TIENDA.pestana = tabs[i]; Sonido.efecto('clic', 0.5); });
+  pestanas(g, x + 10 * U, y + 72 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(TIENDA.pestana), i => { TIENDA.pestana = tabs[i]; Sonido.efecto('clic', 0.5); }, ['traje', 'mascota', 'fuente', 'rayo']);
   const cy = y + 112 * U, P = TIENDA.pestana;
   if (P === 'trajes') {
     const cw = (w - 28 * U) / 3, ch = 112 * U;
@@ -240,7 +240,7 @@ function panelTienda(g, t) {
     BOOSTS.forEach((it, i) => {
       const cx = x + 10 * U + (i % 2) * (cw + 4 * U), yy = cy + Math.floor(i / 2) * (ch + 4 * U);
       tarjetaItem(g, cx, yy, cw, ch, it.dura && G.boosts[it.id] > 0);
-      g.drawImage(iconoBloque(B[it.icono]), cx + cw / 2 - 18 * U, yy + 8 * U, 36 * U, 40.3 * U);
+      if (!(it.img && dibujarIcono(g, it.img, cx + cw / 2, yy + 29 * U, 44 * U))) g.drawImage(iconoBloque(B[it.icono]), cx + cw / 2 - 18 * U, yy + 8 * U, 36 * U, 40.3 * U);
       texto(g, T('boost.' + it.id).toUpperCase(), cx + cw / 2, yy + 60 * U, tamQueEntra(g, T('boost.' + it.id).toUpperCase(), 11 * U, cw - 10 * U), '#fff', '#101826');
       const sub = it.dura ? (G.boosts[it.id] > 0 ? fmtReloj(G.boosts[it.id]) : fmtReloj(it.dura)) : it.id === 'pack' ? '+$' + fmt(unidadPlata() * 5) : it.id === 'gemasAd' ? '+5 · ' + adQueda('gemas') + '/' + TOPES_AD.gemas : '';
       texto(g, sub, cx + cw / 2, yy + 78 * U, 10 * U, G.boosts[it.id] > 0 ? '#8dffa0' : '#cfe6ff', '#101826');

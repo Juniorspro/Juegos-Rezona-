@@ -58,6 +58,7 @@ const window = {
   addEventListener() { }, removeEventListener() { }, AudioContext: _AC, __uiDPR: 1.5, __tiktok: true,
   __audios: ["agua","caja","clic","cofre","desbloquear","fanfarria","martillo","moneda","musica","pala","pop","recoger","tick"],
   __leerAudio: n => { try { return TTG.getFileSystemManager().readFileSync('audio/' + n + '.mp3'); } catch (e) { return null; } },
+  __nuevaImagen: TTG.createImage ? () => TTG.createImage() : undefined,   // el logo y los íconos van en img/ del paquete
   __crearAudio: TTG.createInnerAudioContext ? (n, bucle) => {
     const a = TTG.createInnerAudioContext(); a.src = 'audio/' + n + '.mp3'; a.loop = !!bucle;
     return { play: () => a.play(), stop: () => a.stop(), pause: () => a.pause(), set volume(v) { a.volume = v; }, get volume() { return a.volume; } };
@@ -76,6 +77,8 @@ const document = {
 };
 if (TTG.onHide) TTG.onHide(() => { document.hidden = true; _vis.forEach(f => f()); });
 if (TTG.onShow) TTG.onShow(() => { document.hidden = false; _vis.forEach(f => f()); });
+// el inicio de sesión silencioso que pide TikTok (no muestra nada; el guardado sigue siendo local)
+try { if (TTG.login) TTG.login({ success() { }, fail() { } }); } catch (e) { }
 const navigator = {
   userAgent: 'TikTokMinis Mobile ' + (_sys.platform || '') + ' ' + (_sys.model || ''), language: _sys.language || 'en', languages: [_sys.language || 'en'],
   maxTouchPoints: 5, hardwareConcurrency: 4, deviceMemory: 3,
@@ -129,6 +132,7 @@ window.__componer = hizo3D => {
 };
 
 const AUDIO_DATOS = {};
+const IMAGENES_DATOS = {};
 // MANSION BUILDER — base: medidas de pantalla, azar con semilla, guardado, colores, matrices y equipo
 const JUEGO = 'mansionbuilder';
 const PARAM = new URLSearchParams(location.search);
@@ -273,6 +277,28 @@ function nivelPorGPU(gpu) {
   if (/intel/.test(g)) return 2;
   if (/nvidia|geforce|radeon|amd|rtx|gtx/.test(g)) return 3;
   return EQUIPO.movil ? 1 : 2;
+}
+
+// MANSION BUILDER — las imágenes de Higgsfield: el logo y una hoja con los íconos de la interfaz (8×3 de 128 px).
+// En el HTML vienen en base64 (IMAGENES_DATOS lo arma armar.mjs); en TikTok son archivos del paquete (img/*.png).
+// Mientras no cargan, cada lugar sigue con su dibujo de siempre.
+const ICONOS_HOJA = ['moneda', 'gema', 'estrella', 'cofre', 'regalo', 'martillo', 'bolsa', 'pesca', 'pico', 'bloques', 'anuncio', 'trofeo',
+  'calendario', 'ruleta', 'rayo', 'reloj', 'mejora', 'ayudante', 'mascota', 'traje', 'fuente', 'musica', 'ajustes', 'mapa'];
+const IMG = { listo: {} };
+(function () {
+  const nueva = window.__nuevaImagen || (typeof Image !== 'undefined' ? () => new Image() : null);
+  for (const n of ['iconos', 'logo']) {
+    const src = window.__nuevaImagen ? 'img/' + n + '.png' : (typeof IMAGENES_DATOS !== 'undefined' ? IMAGENES_DATOS[n] : null);
+    if (!nueva || !src) continue;
+    try { const im = nueva(); im.onload = () => { IMG.listo[n] = true; }; im.src = src; IMG[n] = im; } catch (e) { }
+  }
+})();
+// un ícono de la hoja centrado en (x, y) con lado s; false si todavía no cargó
+function dibujarIcono(g, nombre, x, y, s) {
+  const i = ICONOS_HOJA.indexOf(nombre);
+  if (!IMG.listo.iconos || i < 0) return false;
+  g.drawImage(IMG.iconos, (i % 8) * 128, Math.floor(i / 8) * 128, 128, 128, x - s / 2, y - s / 2, s, s);
+  return true;
 }
 
 // MANSION BUILDER — los 4 idiomas (inglés, español, portugués, vietnamita), elegidos solos según el país de la IP
@@ -2940,8 +2966,8 @@ const DECOS = [
   { id: 'faro', plata: 12000, icono: 'LAMPARA' }, { id: 'globo', gemas: 100, icono: 'LANA_AMARILLA' },
 ];
 const BOOSTS = [
-  { id: 'x2', dura: 300, gemas: 12, icono: 'ORO' }, { id: 'vel', dura: 180, gemas: 6, icono: 'LANA_CELESTE' }, { id: 'iman', dura: 300, gemas: 8, icono: 'HIERRO' },
-  { id: 'llenar', gemas: 5, icono: 'CAJA' }, { id: 'pack', gemas: 25, icono: 'BILLETE' }, { id: 'gemasAd', icono: 'CRISTAL_AZUL' },
+  { id: 'x2', dura: 300, gemas: 12, icono: 'ORO', img: 'rayo' }, { id: 'vel', dura: 180, gemas: 6, icono: 'LANA_CELESTE', img: 'reloj' }, { id: 'iman', dura: 300, gemas: 8, icono: 'HIERRO' },
+  { id: 'llenar', gemas: 5, icono: 'CAJA' }, { id: 'pack', gemas: 25, icono: 'BILLETE', img: 'moneda' }, { id: 'gemasAd', icono: 'CRISTAL_AZUL', img: 'gema' },
 ];
 // una "unidad" de plata: lo que dejan los visitantes en un minuto según cuánto va de la mansión (premios que escalan)
 function unidadPlata() { const n = clamp(G.parte, 1, PARTES.length), e = ECO.visita(n); return Math.max(25, Math.round(e.paga / e.cada * 60 / 5) * 5); }
@@ -3129,7 +3155,7 @@ function panelTienda(g, t) {
   botonCerrar(g, x + w - 44 * U, y + 9 * U);
   monedasPanel(g, x + w / 2, y + 54 * U);
   const tabs = ['trajes', 'mascotas', 'decos', 'boosts'];
-  pestanas(g, x + 10 * U, y + 72 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(TIENDA.pestana), i => { TIENDA.pestana = tabs[i]; Sonido.efecto('clic', 0.5); });
+  pestanas(g, x + 10 * U, y + 72 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(TIENDA.pestana), i => { TIENDA.pestana = tabs[i]; Sonido.efecto('clic', 0.5); }, ['traje', 'mascota', 'fuente', 'rayo']);
   const cy = y + 112 * U, P = TIENDA.pestana;
   if (P === 'trajes') {
     const cw = (w - 28 * U) / 3, ch = 112 * U;
@@ -3163,7 +3189,7 @@ function panelTienda(g, t) {
     BOOSTS.forEach((it, i) => {
       const cx = x + 10 * U + (i % 2) * (cw + 4 * U), yy = cy + Math.floor(i / 2) * (ch + 4 * U);
       tarjetaItem(g, cx, yy, cw, ch, it.dura && G.boosts[it.id] > 0);
-      g.drawImage(iconoBloque(B[it.icono]), cx + cw / 2 - 18 * U, yy + 8 * U, 36 * U, 40.3 * U);
+      if (!(it.img && dibujarIcono(g, it.img, cx + cw / 2, yy + 29 * U, 44 * U))) g.drawImage(iconoBloque(B[it.icono]), cx + cw / 2 - 18 * U, yy + 8 * U, 36 * U, 40.3 * U);
       texto(g, T('boost.' + it.id).toUpperCase(), cx + cw / 2, yy + 60 * U, tamQueEntra(g, T('boost.' + it.id).toUpperCase(), 11 * U, cw - 10 * U), '#fff', '#101826');
       const sub = it.dura ? (G.boosts[it.id] > 0 ? fmtReloj(G.boosts[it.id]) : fmtReloj(it.dura)) : it.id === 'pack' ? '+$' + fmt(unidadPlata() * 5) : it.id === 'gemasAd' ? '+5 · ' + adQueda('gemas') + '/' + TOPES_AD.gemas : '';
       texto(g, sub, cx + cw / 2, yy + 78 * U, 10 * U, G.boosts[it.id] > 0 ? '#8dffa0' : '#cfe6ff', '#101826');
@@ -3331,7 +3357,7 @@ function panelActividades(g, t) {
   texto(g, T('actividades'), x + w / 2, y + 26 * U, 20 * U, '#ffd34a', '#101826');
   botonCerrar(g, x + w - 44 * U, y + 9 * U);
   const tabs = ['misiones', 'logros', 'calendario'];
-  pestanas(g, x + 10 * U, y + 50 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(ACT.pestana), i => { ACT.pestana = tabs[i]; Sonido.efecto('clic', 0.5); });
+  pestanas(g, x + 10 * U, y + 50 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(ACT.pestana), i => { ACT.pestana = tabs[i]; Sonido.efecto('clic', 0.5); }, ['estrella', 'trofeo', 'calendario']);
   const cy = y + 92 * U;
   if (ACT.pestana === 'misiones') {
     const L = misionesDeHoy();
@@ -3739,7 +3765,7 @@ MJ_DIBUJO.excava = (g, s, t) => {
       const k = Math.min(1, c.t / 0.35), sube = (1 - rebote(k)) * 20 * U, cx = x + cs / 2, cy = y + cs / 2 - sube;
       if (c.tp === 'plata') { moneda(g, cx, cy - 6 * U, 13 * U); texto(g, fmt(c.n), cx, cy + 18 * U, 11 * U, '#fff', '#101826'); }
       else if (c.tp === 'gemas') { gema(g, cx, cy - 6 * U, 13 * U); texto(g, '+' + c.n, cx, cy + 18 * U, 11 * U, '#fff', '#101826'); }
-      else if (c.tp === 'cofre') { g.drawImage(iconoBloque(B.CAJA), cx - 16 * U, cy - 24 * U, 32 * U, 35.8 * U); texto(g, fmt(c.n), cx, cy + 20 * U, 11 * U, '#ffe066', '#101826'); }
+      else if (c.tp === 'cofre') { if (!dibujarIcono(g, 'cofre', cx, cy - 6 * U, 38 * U)) g.drawImage(iconoBloque(B.CAJA), cx - 16 * U, cy - 24 * U, 32 * U, 35.8 * U); texto(g, fmt(c.n), cx, cy + 20 * U, 11 * U, '#ffe066', '#101826'); }
       else { g.fillStyle = '#8a8a8e'; g.beginPath(); g.moveTo(cx - 12 * U, cy + 8 * U); g.lineTo(cx - 6 * U, cy - 8 * U); g.lineTo(cx + 8 * U, cy - 6 * U); g.lineTo(cx + 12 * U, cy + 8 * U); g.closePath(); g.fill(); }
     }
     g.imageSmoothingEnabled = true;
@@ -3838,13 +3864,17 @@ function iconoBloque(b) {
   return (UI.iconos[k] = c);
 }
 function moneda(g, x, y, r) {
+  if (dibujarIcono(g, 'moneda', x, y, r * 2.4)) return;
   const gr = g.createLinearGradient(x, y - r, x, y + r); gr.addColorStop(0, '#fff3a8'); gr.addColorStop(0.5, '#ffc928'); gr.addColorStop(1, '#d88a10');
   g.fillStyle = '#8a4a08'; g.beginPath(); g.arc(x, y + r * 0.12, r, 0, TAU); g.fill();
   g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   g.strokeStyle = '#b86a0a'; g.lineWidth = r * 0.14; g.beginPath(); g.arc(x, y, r * 0.72, 0, TAU); g.stroke();
   texto(g, '$', x, y + r * 0.06, r * 1.05, '#b0620a', null);
 }
+// los dibujos que tienen su ícono de Higgsfield en la hoja (cruz, flechas y compartir siguen dibujados)
+const ICONO_IMG = { engranaje: 'ajustes', regalo: 'regalo', tv: 'anuncio', carrito: 'bolsa', estrella: 'estrella', mando: 'bloques', ruleta: 'ruleta', pala: 'pico', calendario: 'calendario' };
 function iconoDibujo(g, tipo, x, y, s, col) {
+  if (ICONO_IMG[tipo] && dibujarIcono(g, ICONO_IMG[tipo], x, y, s * 1.25)) return;
   g.save(); g.translate(x, y); g.fillStyle = col; g.strokeStyle = col; g.lineCap = 'round'; g.lineJoin = 'round';
   if (tipo === 'engranaje') {
     g.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, r = k % 2 ? s * 0.5 : s * 0.38; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill();
@@ -3907,6 +3937,7 @@ function tarjeta(g, x, y, w, h) {
   g.strokeStyle = '#1a2438'; g.lineWidth = 3 * U; rr(g, x, y, w, h, 16 * U); g.stroke();
 }
 function gema(g, x, y, r) {
+  if (dibujarIcono(g, 'gema', x, y, r * 2.5)) return;
   const pts = [[0, -1], [0.85, -0.35], [0.6, 0.75], [-0.6, 0.75], [-0.85, -0.35]];
   g.fillStyle = '#4a1d7a'; g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(x + a * r, y + b * r + r * 0.12) : g.moveTo(x + a * r, y + b * r + r * 0.12)); g.closePath(); g.fill();
   const gr = g.createLinearGradient(x, y - r, x, y + r); gr.addColorStop(0, '#f2d6ff'); gr.addColorStop(0.5, '#c06cf0'); gr.addColorStop(1, '#7a2ec0');
@@ -3928,11 +3959,12 @@ function monedasPanel(g, cx, cy) {
   moneda(g, cx - 104 * U, cy, 8 * U); texto(g, fmt(G.dinero), cx - 92 * U, cy + 1 * U, 12 * U, '#ffe066', '#101826', 'left');
   gema(g, cx + 30 * U, cy, 8 * U); texto(g, fmt(G.gemas), cx + 42 * U, cy + 1 * U, 12 * U, '#e6c8ff', '#101826', 'left');
 }
-function pestanas(g, x, y, w, nombres, actual, f) {
+function pestanas(g, x, y, w, nombres, actual, f, iconos) {
   const U = UI.U, n = nombres.length, bw = (w - (n - 1) * 4 * U) / n;
   nombres.forEach((s, i) => {
     const bx = x + i * (bw + 4 * U), dy = boton(g, bx, y, bw, 30 * U, i === actual ? '#e8a33a' : '#56708f', () => f(i), i === actual);
-    texto(g, s, bx + bw / 2, y + 15 * U + dy, tamQueEntra(g, s, 11 * U, bw - 6 * U), '#fff', '#101826');
+    const ix = iconos && iconos[i] && dibujarIcono(g, iconos[i], bx + 13 * U, y + 15 * U + dy, 21 * U) ? 22 * U : 0;
+    texto(g, s, bx + ix + (bw - ix) / 2, y + 15 * U + dy, tamQueEntra(g, s, 11 * U, bw - ix - 6 * U), '#fff', '#101826');
   });
 }
 function tarjetaItem(g, x, y, w, h, marcado) {
@@ -3962,7 +3994,7 @@ function dibujarUI(g, dt, t) {
   texto(g, sGemas, xg + 34 * U + (wg - 42 * U) / 2, yp + hp / 2 + 1 * U, 18 * U * (1 + UI.pulsoG * 0.15), '#ffffff', '#101826');
   // izquierda: ajustes y el boost x2 por anuncio
   const bs = 44 * U;
-  let dy = boton(g, 10 * U, 10 * U, bs, bs, '#6b7c93', () => abrirPanel('ajustes'));
+  let dy = boton(g, 10 * U, 10 * U, bs, bs, '#4a7fb5', () => abrirPanel('ajustes'));
   iconoDibujo(g, 'engranaje', 10 * U + bs / 2, 10 * U + bs / 2 + dy, bs * 0.62, '#ffffff');
   if (G.parte >= 1) {
     const activo = G.boosts.x2 > 0;
@@ -3974,7 +4006,7 @@ function dibujarUI(g, dt, t) {
     let yb = 120 * U;
     for (const k of ['vel', 'iman']) if (G.boosts[k] > 0) {
       g.fillStyle = 'rgba(24,34,54,0.8)'; rr(g, 8 * U, yb, 48 * U, 22 * U, 11 * U); g.fill();
-      g.drawImage(iconoBloque(k === 'vel' ? B.LANA_CELESTE : B.HIERRO), 11 * U, yb + 2 * U, 16 * U, 17.9 * U);
+      if (!(k === 'vel' && dibujarIcono(g, 'reloj', 19 * U, yb + 11 * U, 20 * U))) g.drawImage(iconoBloque(k === 'vel' ? B.LANA_CELESTE : B.HIERRO), 11 * U, yb + 2 * U, 16 * U, 17.9 * U);
       texto(g, fmtReloj(G.boosts[k]), 42 * U, yb + 11.5 * U, 9 * U, '#fff', '#101826'); yb += 26 * U;
     }
   }
@@ -4106,7 +4138,7 @@ function etiquetasMundo(g, t) {
     else if (q) {
       const ex = clamp(q[0], 0.08, 0.92) * Wc, ey = clamp(q[1], 0.2, 0.9) * Hc;
       g.fillStyle = 'rgba(24,34,54,0.85)'; g.beginPath(); g.arc(ex, ey, 18 * U, 0, TAU); g.fill(); g.strokeStyle = '#ffd34a'; g.lineWidth = 2 * U; g.stroke();
-      g.drawImage(iconoBloque(B.CAJA), ex - 11 * U, ey - 13 * U, 22 * U, 24.6 * U);
+      if (!dibujarIcono(g, 'cofre', ex, ey, 27 * U)) g.drawImage(iconoBloque(B.CAJA), ex - 11 * U, ey - 13 * U, 22 * U, 24.6 * U);
     }
   }
   // la obra: lo que falta, con íconos
@@ -4359,8 +4391,15 @@ function dibujarCarga(g, dt, prog, listo) {
     const gr = g.createLinearGradient(0, y - tam / 2, 0, y + tam / 2); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
     g.fillStyle = gr; g.fillText(s, Wc / 2, y);
   };
-  logo('MANSION', ly + wob, t1, '#fff7b0', '#ffb31a');
-  logo('BUILDER', ly + t1 * 0.85 + wob, t2, '#ffffff', '#9fd8ff');
+  if (IMG.listo.logo) {
+    // el logo de Higgsfield: termina donde terminaba el de letras, y se achica si no entra arriba
+    const L = IMG.logo, abajo = ly + t1 * 0.85 + t2 * 0.6, alto = Math.min((Wc - 30 * U) * L.height / L.width, 340 * U * L.height / L.width, abajo - 8 * U);
+    const ancho = alto * L.width / L.height;
+    g.drawImage(L, Wc / 2 - ancho / 2, abajo - alto + wob, ancho, alto);
+  } else {
+    logo('MANSION', ly + wob, t1, '#fff7b0', '#ffb31a');
+    logo('BUILDER', ly + t1 * 0.85 + wob, t2, '#ffffff', '#9fd8ff');
+  }
   const sub = T('sub'); texto(g, sub, Wc / 2, ly + t1 * 0.85 + t2 * 0.9 + 6 * U, tamQueEntra(g, sub, 15 * U, Wc - 40 * U), '#ffffff', '#1d3557');
   // el constructor y la casita sobre el pasto
   const suelo = CARGA.suelo, px = Math.max(3, Math.round(Math.min(6.5 * U, (suelo - ly - 150 * U) / 34)));

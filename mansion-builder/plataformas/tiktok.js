@@ -57,6 +57,7 @@ const window = {
   addEventListener() { }, removeEventListener() { }, AudioContext: _AC, __uiDPR: 1.5, __tiktok: true,
   __audios: /*AUDIOS*/,
   __leerAudio: n => { try { return TTG.getFileSystemManager().readFileSync('audio/' + n + '.mp3'); } catch (e) { return null; } },
+  __nuevaImagen: TTG.createImage ? () => TTG.createImage() : undefined,   // el logo y los íconos van en img/ del paquete
   __crearAudio: TTG.createInnerAudioContext ? (n, bucle) => {
     const a = TTG.createInnerAudioContext(); a.src = 'audio/' + n + '.mp3'; a.loop = !!bucle;
     return { play: () => a.play(), stop: () => a.stop(), pause: () => a.pause(), set volume(v) { a.volume = v; }, get volume() { return a.volume; } };
@@ -75,6 +76,8 @@ const document = {
 };
 if (TTG.onHide) TTG.onHide(() => { document.hidden = true; _vis.forEach(f => f()); });
 if (TTG.onShow) TTG.onShow(() => { document.hidden = false; _vis.forEach(f => f()); });
+// el inicio de sesión silencioso que pide TikTok (no muestra nada; el guardado sigue siendo local)
+try { if (TTG.login) TTG.login({ success() { }, fail() { } }); } catch (e) { }
 const navigator = {
   userAgent: 'TikTokMinis Mobile ' + (_sys.platform || '') + ' ' + (_sys.model || ''), language: _sys.language || 'en', languages: [_sys.language || 'en'],
   maxTouchPoints: 5, hardwareConcurrency: 4, deviceMemory: 3,

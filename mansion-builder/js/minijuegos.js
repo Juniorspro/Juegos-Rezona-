@@ -285,7 +285,7 @@ MJ_DIBUJO.excava = (g, s, t) => {
       const k = Math.min(1, c.t / 0.35), sube = (1 - rebote(k)) * 20 * U, cx = x + cs / 2, cy = y + cs / 2 - sube;
       if (c.tp === 'plata') { moneda(g, cx, cy - 6 * U, 13 * U); texto(g, fmt(c.n), cx, cy + 18 * U, 11 * U, '#fff', '#101826'); }
       else if (c.tp === 'gemas') { gema(g, cx, cy - 6 * U, 13 * U); texto(g, '+' + c.n, cx, cy + 18 * U, 11 * U, '#fff', '#101826'); }
-      else if (c.tp === 'cofre') { g.drawImage(iconoBloque(B.CAJA), cx - 16 * U, cy - 24 * U, 32 * U, 35.8 * U); texto(g, fmt(c.n), cx, cy + 20 * U, 11 * U, '#ffe066', '#101826'); }
+      else if (c.tp === 'cofre') { if (!dibujarIcono(g, 'cofre', cx, cy - 6 * U, 38 * U)) g.drawImage(iconoBloque(B.CAJA), cx - 16 * U, cy - 24 * U, 32 * U, 35.8 * U); texto(g, fmt(c.n), cx, cy + 20 * U, 11 * U, '#ffe066', '#101826'); }
       else { g.fillStyle = '#8a8a8e'; g.beginPath(); g.moveTo(cx - 12 * U, cy + 8 * U); g.lineTo(cx - 6 * U, cy - 8 * U); g.lineTo(cx + 8 * U, cy - 6 * U); g.lineTo(cx + 12 * U, cy + 8 * U); g.closePath(); g.fill(); }
     }
     g.imageSmoothingEnabled = true;

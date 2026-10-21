@@ -90,10 +90,12 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   (`js/anuncios.js`: TikTok `TTMinis.game.createRewardedVideoAd`, CrazyGames, Poki o uno de prueba de 3 s; topes por día
   en `TOPES_AD`; `ANUNCIO_ID.tiktok` lo pone el dueño). **4 idiomas (en/es/pt/vi) por el país de la IP, sin pantalla de
   idioma** (pedido del dueño; se cambia en ajustes). Gráficos 0-3 según GPU y FPS. Música y efectos de Higgsfield en
-  `audio/`, Bungee en `fuente/` (woff2 para el HTML, ttf para TikTok). `node mansion-builder/armar.mjs` →
-  `mansion-builder.html` (~1,25 MB); con `--tiktok` además `tiktok/` (runtime nativo: `plataformas/tiktok.js` hace de
-  navegador: lienzo WebGL2 + interfaz 2D compuesta como textura, toques, guardado, InnerAudio/WebAudio, Path2D; ~1,1 MB;
-  probado solo con un `tt` simulado). Prueba: `?prueba` (`&intro`, `&carga`), `window.__juego` (`bot=true`, `congelar()`,
+  `audio/`, Bungee en `fuente/` (woff2 para el HTML, ttf para TikTok). Logo y hoja de 24 íconos (8×3 de 128 px) de
+  Higgsfield en `img/`: `js/imagenes.js` (`dibujarIcono(g, nombre, x, y, s)`, `IMG.logo`) los usa en la carga, la plata,
+  las gemas, los botones (`ICONO_IMG` en ui.js), las pestañas, los boosts y los cofres; sin cargar, queda el dibujo viejo.
+  `node mansion-builder/armar.mjs` → `mansion-builder.html` (~1,5 MB); con `--tiktok` además `tiktok/` (runtime nativo:
+  `plataformas/tiktok.js` hace de navegador: lienzo WebGL2 + interfaz 2D compuesta como textura, toques, guardado,
+  InnerAudio/WebAudio, Path2D, `createImage`, login silencioso; ~1,3 MB; probado solo con un `tt` simulado). Prueba: `?prueba` (`&intro`, `&carga`), `window.__juego` (`bot=true`, `congelar()`,
   `paso(n,dib)`, `completar(k)`, `renovar()`, `dar(n)`, `gemas(n)`, `mj(t)`, `tocar(x,y)`, `dibujarMJ()`, `calidad(n)`,
   `idioma(l)`, `panel(p)`, `ir(x,z)`, `camara(o)`, `borrar()`, `medir(n)`, `stats()`, `ev(s)` solo con `?prueba`).
   El bot termina la mansión en ~10 min de juego.

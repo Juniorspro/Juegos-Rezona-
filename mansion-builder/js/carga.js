@@ -91,8 +91,15 @@ function dibujarCarga(g, dt, prog, listo) {
     const gr = g.createLinearGradient(0, y - tam / 2, 0, y + tam / 2); gr.addColorStop(0, c1); gr.addColorStop(1, c2);
     g.fillStyle = gr; g.fillText(s, Wc / 2, y);
   };
-  logo('MANSION', ly + wob, t1, '#fff7b0', '#ffb31a');
-  logo('BUILDER', ly + t1 * 0.85 + wob, t2, '#ffffff', '#9fd8ff');
+  if (IMG.listo.logo) {
+    // el logo de Higgsfield: termina donde terminaba el de letras, y se achica si no entra arriba
+    const L = IMG.logo, abajo = ly + t1 * 0.85 + t2 * 0.6, alto = Math.min((Wc - 30 * U) * L.height / L.width, 340 * U * L.height / L.width, abajo - 8 * U);
+    const ancho = alto * L.width / L.height;
+    g.drawImage(L, Wc / 2 - ancho / 2, abajo - alto + wob, ancho, alto);
+  } else {
+    logo('MANSION', ly + wob, t1, '#fff7b0', '#ffb31a');
+    logo('BUILDER', ly + t1 * 0.85 + wob, t2, '#ffffff', '#9fd8ff');
+  }
   const sub = T('sub'); texto(g, sub, Wc / 2, ly + t1 * 0.85 + t2 * 0.9 + 6 * U, tamQueEntra(g, sub, 15 * U, Wc - 40 * U), '#ffffff', '#1d3557');
   // el constructor y la casita sobre el pasto
   const suelo = CARGA.suelo, px = Math.max(3, Math.round(Math.min(6.5 * U, (suelo - ly - 150 * U) / 34)));

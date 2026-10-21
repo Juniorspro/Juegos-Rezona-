@@ -136,7 +136,7 @@ function panelActividades(g, t) {
   texto(g, T('actividades'), x + w / 2, y + 26 * U, 20 * U, '#ffd34a', '#101826');
   botonCerrar(g, x + w - 44 * U, y + 9 * U);
   const tabs = ['misiones', 'logros', 'calendario'];
-  pestanas(g, x + 10 * U, y + 50 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(ACT.pestana), i => { ACT.pestana = tabs[i]; Sonido.efecto('clic', 0.5); });
+  pestanas(g, x + 10 * U, y + 50 * U, w - 20 * U, tabs.map(k => T('tab.' + k)), tabs.indexOf(ACT.pestana), i => { ACT.pestana = tabs[i]; Sonido.efecto('clic', 0.5); }, ['estrella', 'trofeo', 'calendario']);
   const cy = y + 92 * U;
   if (ACT.pestana === 'misiones') {
     const L = misionesDeHoy();

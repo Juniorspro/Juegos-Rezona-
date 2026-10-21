@@ -50,13 +50,17 @@ function iconoBloque(b) {
   return (UI.iconos[k] = c);
 }
 function moneda(g, x, y, r) {
+  if (dibujarIcono(g, 'moneda', x, y, r * 2.4)) return;
   const gr = g.createLinearGradient(x, y - r, x, y + r); gr.addColorStop(0, '#fff3a8'); gr.addColorStop(0.5, '#ffc928'); gr.addColorStop(1, '#d88a10');
   g.fillStyle = '#8a4a08'; g.beginPath(); g.arc(x, y + r * 0.12, r, 0, TAU); g.fill();
   g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   g.strokeStyle = '#b86a0a'; g.lineWidth = r * 0.14; g.beginPath(); g.arc(x, y, r * 0.72, 0, TAU); g.stroke();
   texto(g, '$', x, y + r * 0.06, r * 1.05, '#b0620a', null);
 }
+// los dibujos que tienen su ícono de Higgsfield en la hoja (cruz, flechas y compartir siguen dibujados)
+const ICONO_IMG = { engranaje: 'ajustes', regalo: 'regalo', tv: 'anuncio', carrito: 'bolsa', estrella: 'estrella', mando: 'bloques', ruleta: 'ruleta', pala: 'pico', calendario: 'calendario' };
 function iconoDibujo(g, tipo, x, y, s, col) {
+  if (ICONO_IMG[tipo] && dibujarIcono(g, ICONO_IMG[tipo], x, y, s * 1.25)) return;
   g.save(); g.translate(x, y); g.fillStyle = col; g.strokeStyle = col; g.lineCap = 'round'; g.lineJoin = 'round';
   if (tipo === 'engranaje') {
     g.beginPath(); for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, r = k % 2 ? s * 0.5 : s * 0.38; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); g.fill();
@@ -119,6 +123,7 @@ function tarjeta(g, x, y, w, h) {
   g.strokeStyle = '#1a2438'; g.lineWidth = 3 * U; rr(g, x, y, w, h, 16 * U); g.stroke();
 }
 function gema(g, x, y, r) {
+  if (dibujarIcono(g, 'gema', x, y, r * 2.5)) return;
   const pts = [[0, -1], [0.85, -0.35], [0.6, 0.75], [-0.6, 0.75], [-0.85, -0.35]];
   g.fillStyle = '#4a1d7a'; g.beginPath(); pts.forEach(([a, b], i) => i ? g.lineTo(x + a * r, y + b * r + r * 0.12) : g.moveTo(x + a * r, y + b * r + r * 0.12)); g.closePath(); g.fill();
   const gr = g.createLinearGradient(x, y - r, x, y + r); gr.addColorStop(0, '#f2d6ff'); gr.addColorStop(0.5, '#c06cf0'); gr.addColorStop(1, '#7a2ec0');
@@ -140,11 +145,12 @@ function monedasPanel(g, cx, cy) {
   moneda(g, cx - 104 * U, cy, 8 * U); texto(g, fmt(G.dinero), cx - 92 * U, cy + 1 * U, 12 * U, '#ffe066', '#101826', 'left');
   gema(g, cx + 30 * U, cy, 8 * U); texto(g, fmt(G.gemas), cx + 42 * U, cy + 1 * U, 12 * U, '#e6c8ff', '#101826', 'left');
 }
-function pestanas(g, x, y, w, nombres, actual, f) {
+function pestanas(g, x, y, w, nombres, actual, f, iconos) {
   const U = UI.U, n = nombres.length, bw = (w - (n - 1) * 4 * U) / n;
   nombres.forEach((s, i) => {
     const bx = x + i * (bw + 4 * U), dy = boton(g, bx, y, bw, 30 * U, i === actual ? '#e8a33a' : '#56708f', () => f(i), i === actual);
-    texto(g, s, bx + bw / 2, y + 15 * U + dy, tamQueEntra(g, s, 11 * U, bw - 6 * U), '#fff', '#101826');
+    const ix = iconos && iconos[i] && dibujarIcono(g, iconos[i], bx + 13 * U, y + 15 * U + dy, 21 * U) ? 22 * U : 0;
+    texto(g, s, bx + ix + (bw - ix) / 2, y + 15 * U + dy, tamQueEntra(g, s, 11 * U, bw - ix - 6 * U), '#fff', '#101826');
   });
 }
 function tarjetaItem(g, x, y, w, h, marcado) {
@@ -174,7 +180,7 @@ function dibujarUI(g, dt, t) {
   texto(g, sGemas, xg + 34 * U + (wg - 42 * U) / 2, yp + hp / 2 + 1 * U, 18 * U * (1 + UI.pulsoG * 0.15), '#ffffff', '#101826');
   // izquierda: ajustes y el boost x2 por anuncio
   const bs = 44 * U;
-  let dy = boton(g, 10 * U, 10 * U, bs, bs, '#6b7c93', () => abrirPanel('ajustes'));
+  let dy = boton(g, 10 * U, 10 * U, bs, bs, '#4a7fb5', () => abrirPanel('ajustes'));
   iconoDibujo(g, 'engranaje', 10 * U + bs / 2, 10 * U + bs / 2 + dy, bs * 0.62, '#ffffff');
   if (G.parte >= 1) {
     const activo = G.boosts.x2 > 0;
@@ -186,7 +192,7 @@ function dibujarUI(g, dt, t) {
     let yb = 120 * U;
     for (const k of ['vel', 'iman']) if (G.boosts[k] > 0) {
       g.fillStyle = 'rgba(24,34,54,0.8)'; rr(g, 8 * U, yb, 48 * U, 22 * U, 11 * U); g.fill();
-      g.drawImage(iconoBloque(k === 'vel' ? B.LANA_CELESTE : B.HIERRO), 11 * U, yb + 2 * U, 16 * U, 17.9 * U);
+      if (!(k === 'vel' && dibujarIcono(g, 'reloj', 19 * U, yb + 11 * U, 20 * U))) g.drawImage(iconoBloque(k === 'vel' ? B.LANA_CELESTE : B.HIERRO), 11 * U, yb + 2 * U, 16 * U, 17.9 * U);
       texto(g, fmtReloj(G.boosts[k]), 42 * U, yb + 11.5 * U, 9 * U, '#fff', '#101826'); yb += 26 * U;
     }
   }
@@ -318,7 +324,7 @@ function etiquetasMundo(g, t) {
     else if (q) {
       const ex = clamp(q[0], 0.08, 0.92) * Wc, ey = clamp(q[1], 0.2, 0.9) * Hc;
       g.fillStyle = 'rgba(24,34,54,0.85)'; g.beginPath(); g.arc(ex, ey, 18 * U, 0, TAU); g.fill(); g.strokeStyle = '#ffd34a'; g.lineWidth = 2 * U; g.stroke();
-      g.drawImage(iconoBloque(B.CAJA), ex - 11 * U, ey - 13 * U, 22 * U, 24.6 * U);
+      if (!dibujarIcono(g, 'cofre', ex, ey, 27 * U)) g.drawImage(iconoBloque(B.CAJA), ex - 11 * U, ey - 13 * U, 22 * U, 24.6 * U);
     }
   }
   // la obra: lo que falta, con íconos
