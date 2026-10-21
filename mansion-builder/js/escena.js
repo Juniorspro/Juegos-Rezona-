@@ -71,7 +71,7 @@ function armarEscena(t) {
   const E = ESC;
   E.personajes.length = 0;
   const pj = JUG;
-  personaje({ x: pj.x, y: pj.y, z: pj.z, yaw: pj.yaw, fase: pj.fase, andar: pj.andar, carga: pj.carga.length > 0, sem: 0, huesos: pj.huesos || (pj.huesos = new Float32Array(128)), festejo: VIVO.festejo > 0 && !pj.carga.length }, PIELES.jugador, t, 0.92);
+  personaje({ x: pj.x, y: pj.y, z: pj.z, yaw: pj.yaw, fase: pj.fase, andar: pj.andar, carga: pj.carga.length > 0, sem: 0, huesos: pj.huesos || (pj.huesos = new Float32Array(128)), festejo: VIVO.festejo > 0 && !pj.carga.length }, PIELES[G.traje] != null ? PIELES[G.traje] : PIELES.jugador, t, 0.92);
   for (const a of AYUD) personaje({ x: a.x, y: a.y, z: a.z, yaw: a.yaw, fase: a.fase, andar: a.andar, carga: a.carga.length > 0, sem: a.sem, huesos: a.huesos || (a.huesos = new Float32Array(128)) }, a.piel, t, 0.86);
   for (const v of VIS) personaje({ x: v.x, y: v.y, z: v.z, yaw: v.yaw, fase: v.fase, andar: v.andar, sem: v.sem, mirarAbajo: v.mirarAbajo || 0, festejo: v.festejo > 0, huesos: v.huesos || (v.huesos = new Float32Array(128)) }, v.piel, t, 0.84);
   // cubos sueltos
@@ -85,6 +85,7 @@ function armarEscena(t) {
     else cubo(dst[0], dst[1], dst[2], 0.36, c.yaw, BLOQUE_DE[it.m]);
   }
   for (const v of VOL) { if (t < v.t0) continue; const k = posVuelo(v, _v); cubo(_v[0], _v[1], _v[2], v.esc, v.giro * k, v.b); }
+  dibujarMascota(cubo, t); dibujarCofres(cubo, t);
   const nb = billetesCaja(), cj = LUGAR.caja;
   for (let i = 0; i < nb; i++) { const k = i % 9, f = Math.floor(i / 9); cubo(cj[0] + ((k % 3) - 1) * 0.62, SUELO + 0.1 + f * 0.17, cj[1] + (Math.floor(k / 3) - 1) * 0.42, -0.55, (hash2(i, 7) - 0.5) * 0.2, B.BILLETE); }
   E.nCubos = n;
@@ -96,6 +97,9 @@ function armarEscena(t) {
   calca(cj[0], SUELO + 0.03, cj[1], 2.9, 2.9, 3, 0, 0);
   for (const m in G.gens) { const p = LUGAR.gen[m].pila; calca(p[0], SUELO + 0.025, p[1], 3.2, 3.2, 4, 0, m.length); }
   for (const p of PADS) if (padActivo(p)) calca(p.x, SUELO + 0.03, p.z, 2.6, 2.6, 1, (G.pads[p.id] || 0) / p.precio(), 0);
+  if (G.parte >= 1) for (const a of ACT_PADS) calca(a.x, alturaPiso(a.x, a.z) + 0.03, a.z, 2.4, 2.4, 5, 0, 0);
+  if (G.mascota) calca(MASC.x, MASC.y + 0.02, MASC.z, 0.7, 0.7, 0, 0, 0);
+  if (COFRES.uno) calca(COFRES.uno.x, SUELO + 0.02, COFRES.uno.z, 1.2, 1.2, 4, 0, 1);
   E.nCalcas = nc;
   // partículas
   const Pd = R.quadPart.inst.datos; let np = 0;

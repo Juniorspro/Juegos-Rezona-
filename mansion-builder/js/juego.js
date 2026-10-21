@@ -1,6 +1,19 @@
 // MANSION BUILDER — el juego: el constructor, las máquinas, la obra, la plata, los ayudantes y los visitantes
 function estadoNuevo() {
-  return { v: 1, dinero: 0, parte: 0, entregado: {}, gens: { madera: { nivel: 1, pila: 10 } }, mochila: 0, vel: 0, ayud: 0, pads: {}, caja: 0, visitas: 0, bloques: 0, ganado: 0, diario: 0, t: Date.now(), jugado: 0 };
+  return {
+    v: 2, dinero: 0, parte: 0, entregado: {}, gens: { madera: { nivel: 1, pila: 10 } }, mochila: 0, vel: 0, ayud: 0, pads: {}, caja: 0, visitas: 0, bloques: 0, ganado: 0, t: Date.now(), jugado: 0,
+    gemas: 0, estrellas: 0, traje: 'jugador', trajes: ['jugador'], mascota: null, mascotas: [], decos: [], adProg: {}, boosts: { x2: 0, vel: 0, iman: 0 },
+    mis: null, logros: {}, racha: { dia: 0, n: 0 }, ruleta: { dia: 0 }, mj: { dia: 0, torre: 0, excava: 0, cebo: 5, ceboT: 0, mejorTorre: 0 },
+    stats: { peces: 0, cofres: 0, torre: 0, anuncios: 0, minijuegos: 0 }, adDia: 0, adUsos: {},
+  };
+}
+// completa lo que falte de una partida vieja (los objetos de adentro también)
+function normalizarEstado(leido) {
+  const n = estadoNuevo(), e = Object.assign(n, leido || {});
+  for (const k of ['boosts', 'racha', 'ruleta', 'mj', 'stats']) e[k] = Object.assign(estadoNuevo()[k], (leido && leido[k]) || {});
+  for (const k of ['trajes', 'mascotas', 'decos']) if (!Array.isArray(e[k])) e[k] = estadoNuevo()[k];
+  if (!e.trajes.includes('jugador')) e.trajes.unshift('jugador');
+  return e;
 }
 let G = estadoNuevo();
 const VIVO = { t: 0, gen: {}, obj: null, objT: 0, cajaVol: 0, cajaIni: 0, visitaT: 4, guardarT: 0, humoT: 0, festejo: 0, padActivo: null };
@@ -19,7 +32,7 @@ function guardar() {
 }
 function cargarEstado() {
   const leido = Guardado.leer('estado', null);
-  G = Object.assign(estadoNuevo(), leido || {});
+  G = normalizarEstado(leido);
   if (!G.gens.madera) G.gens.madera = { nivel: 1, pila: 10 };
   return !!leido;
 }
@@ -29,13 +42,13 @@ function prepararParte() {
   const P = PARTES[G.parte];
   OBRA.porMat = {}; OBRA.adorno = []; OBRA.aterrizado = {}; OBRA.fantSucio = true;
   if (!P) return;
-  for (const v of listaDe(P.arma)) { const m = BLOQ[v[3]].m; if (m && P.need[m]) (OBRA.porMat[m] || (OBRA.porMat[m] = [])).push(v); else OBRA.adorno.push(v); }
+  for (const v of listaParte(G.parte)) { const m = BLOQ[v[3]].m; if (m && P.need[m]) (OBRA.porMat[m] || (OBRA.porMat[m] = [])).push(v); else OBRA.adorno.push(v); }
   for (const m in OBRA.porMat) OBRA.porMat[m].sort((a, b) => a[1] - b[1] || b[2] - a[2] || a[0] - b[0]);
   for (const m in P.need) { if (!G.entregado[m]) G.entregado[m] = 0; OBRA.aterrizado[m] = G.entregado[m]; }
 }
 // cuántos bloques del mundo hay puestos de un material tras k entregas
-function hasta(m, k) { const P = PARTES[G.parte], L = OBRA.porMat[m], n = P.need[m]; if (!L) return 0; return k >= n ? L.length : Math.floor(k * L.length / n); }
-const faltaEntregar = m => { const P = PARTES[G.parte]; return P ? (P.need[m] || 0) - (G.entregado[m] || 0) : 0; };
+function hasta(m, k) { const L = OBRA.porMat[m], n = necesita(G.parte, m); if (!L) return 0; return k >= n ? L.length : Math.floor(k * L.length / n); }
+const faltaEntregar = m => PARTES[G.parte] ? necesita(G.parte, m) - (G.entregado[m] || 0) : 0;
 function cargando(m) { let n = 0; for (const c of JUG.carga) if (c.m === m) n++; for (const a of AYUD) for (const c of a.carga) if (c.m === m) n++; return n; }
 const faltaJuntar = m => faltaEntregar(m) - cargando(m);
 function colocar(lista, efecto) {
@@ -44,21 +57,22 @@ function colocar(lista, efecto) {
     if (efecto) chispas(v[0] + 0.5, v[1] + 0.6, v[2] + 0.5, colorBloque(v[3]), 3, 2.2);
   }
 }
-function parteCompleta() { const P = PARTES[G.parte]; if (!P) return false; for (const m in P.need) if ((OBRA.aterrizado[m] || 0) < P.need[m]) return false; return true; }
+function parteCompleta() { const P = PARTES[G.parte]; if (!P) return false; for (const m in P.need) if ((OBRA.aterrizado[m] || 0) < necesita(G.parte, m)) return false; return true; }
 function completarParte() {
   const P = PARTES[G.parte];
   colocar(OBRA.adorno, true);
-  // el premio vuela de la mansión a la caja en billetes
-  G.caja += P.premio; VIVO.cajaVol += P.premio;
+  // el premio vuela de la mansión a la caja en billetes (cada estrella lo agranda)
+  const premio = Math.round(P.premio * (1 + 0.5 * (G.estrellas || 0)));
+  G.caja += premio; VIVO.cajaVol += premio;
   const nb = 14, c = LUGAR.caja;
   for (let k = 0; k < nb; k++) {
-    const parte = Math.floor(P.premio * (k + 1) / nb) - Math.floor(P.premio * k / nb);
+    const parte = Math.floor(premio * (k + 1) / nb) - Math.floor(premio * k / nb);
     volar(B.BILLETE, -0.55, [24 + rnd(-6, 6), 12 + rnd(0, 6), 18 + rnd(-3, 6)], () => posCajaArriba(), 0.9 + k * 0.05, 4, () => { VIVO.cajaVol -= parte; Sonido.efecto('moneda', 0.5, 1 + k * 0.03, 0.02); }, k * 0.04);
   }
   for (let k = 0; k < 90; k++) confeti(24 + rnd(-10, 10), 16 + rnd(0, 6), 19 + rnd(-6, 8));
-  G.parte++; G.entregado = {};
+  G.parte++; G.entregado = {}; G.gemas += 5; UI.pulsoGemas();
   Sonido.efecto('fanfarria', 0.9); Sonido.vibrar([40, 30, 60]);
-  UI.festejo(T('lista', { p: T('parte.' + P.id).toUpperCase() }), '+$' + fmt(P.premio));
+  UI.festejo(T('lista', { p: T('parte.' + P.id).toUpperCase() }), '+$' + fmt(premio));
   VIVO.festejo = 3;
   if (G.parte >= PARTES.length) { UI.festejo(T('mansion'), T('fin'), true); VIVO.festejo = 6; }
   prepararParte();
@@ -81,7 +95,9 @@ function armarFantasma() {
 function reconstruirMundo() {
   generarMundo();
   for (const m in G.gens) colocar(listaDe(MAQUINAS[m].arma), false);
-  for (let i = 0; i < Math.min(G.parte, PARTES.length); i++) colocar(listaDe(PARTES[i].arma), false);
+  colocar(listaDe(ARCADE_ARMA), false);
+  for (const d of G.decos) if (DECO_ARMA[d]) colocar(listaDe(DECO_ARMA[d]), false);
+  for (let i = 0; i < Math.min(G.parte, PARTES.length); i++) colocar(listaParte(i), false);
   prepararParte();
   for (const m in OBRA.porMat) colocar(OBRA.porMat[m].slice(0, hasta(m, G.entregado[m] || 0)), false);
   Mundo.sucios.clear(); for (let i = 0; i < NCX * NCZ; i++) Mundo.sucios.add(i);
@@ -90,6 +106,27 @@ function reconstruirMundo() {
   AYUD.length = 0; for (let i = 0; i < G.ayud; i++) AYUD.push(nuevoAyudante(i));
   VIS.length = 0; VOL.length = 0; JUG.carga.length = 0; VIVO.cajaVol = 0;
   JUG.x = LUGAR.inicio[0]; JUG.z = LUGAR.inicio[1]; JUG.yaw = PI;
+  COFRES.uno = null; COFRES.t = 70; MASC.huevos.length = 0; ponerMascota();
+}
+// una mansión nueva con otro estilo: se conserva todo menos lo construido; los visitantes pagan +50% por estrella
+function renovarMansion() {
+  if (G.parte < PARTES.length) return;
+  G.estrellas = (G.estrellas || 0) + 1; G.parte = 0; G.entregado = {}; G.gemas += 50;
+  reconstruirMundo(); armarFantasma();
+  for (let k = 0; k < 80; k++) confeti(24 + rnd(-8, 8), 10 + rnd(0, 6), 20 + rnd(-6, 8));
+  Sonido.efecto('fanfarria', 0.9); UI.festejo(T('renovar') + (G.estrellas + 1), '+50 💎', true);
+  UI.panel = null; guardar();
+}
+// la maquinita de arcade (abre los minijuegos) y los cuadros de actividad del mundo
+function ARCADE_ARMA(p) { p(28, 5, 40, B.LANA_AZUL); p(29, 5, 40, B.LANA_AZUL); p(28, 6, 40, B.LAMPARA); p(29, 6, 40, B.LAMPARA); p(28, 7, 40, B.LANA_ROJA); p(29, 7, 40, B.LANA_ROJA); p(28, 8, 40, B.LANA_AMARILLA); p(29, 8, 40, B.LANA_AMARILLA); }
+const ACT_PADS = [{ id: 'pesca', x: 24, z: 69.4 }, { id: 'arcade', x: 28.5, z: 42.4 }];
+function padsActividad(dt) {
+  let sobre = null;
+  for (const a of ACT_PADS) if (Math.abs(JUG.x - a.x) < 1.2 && Math.abs(JUG.z - a.z) < 1.2) sobre = a;
+  if (!sobre || Math.hypot(JUG.vx, JUG.vz) > 1.2) { JUG.tAct = 0.45; JUG.actHecho = sobre ? JUG.actHecho : null; return; }
+  if (JUG.actHecho === sobre.id) return;
+  JUG.tAct -= dt;
+  if (JUG.tAct <= 0) { JUG.actHecho = sobre.id; if (sobre.id === 'pesca') abrirMinijuego('pesca', null); else abrirPanel('minijuegos'); }
 }
 
 // ---------- las máquinas y sus pilas ----------
@@ -146,7 +183,7 @@ function centroDe(grupo, def) {
 }
 function aterrizar(m, grupo) {
   colocar(grupo, true);
-  OBRA.aterrizado[m] = (OBRA.aterrizado[m] || 0) + 1; G.bloques++;
+  OBRA.aterrizado[m] = (OBRA.aterrizado[m] || 0) + 1; G.bloques++; mision('entregar', 1);
   OBRA.fantSucio = true;
   Sonido.efecto(vis() < 0.5 ? 'pop' : 'martillo', 0.55, 0.9 + vis() * 0.25, 0.05);
   if (parteCompleta()) completarParte();
@@ -162,7 +199,7 @@ function fmt(n) {
   return (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
 }
 function cobrarCaja(dt) {
-  const c = LUGAR.caja, en = Math.abs(JUG.x - c[0]) < 1.5 && Math.abs(JUG.z - c[1]) < 1.5;
+  const c = LUGAR.caja, en = (Math.abs(JUG.x - c[0]) < 1.5 && Math.abs(JUG.z - c[1]) < 1.5) || G.boosts.iman > 0 || (G.mascota === 'gato' && dist2(JUG.x, JUG.z, c[0], c[1]) < 81);
   if (!en) { VIVO.cajaIni = 0; return; }
   if (G.caja <= 0) return;
   if (!VIVO.cajaIni) VIVO.cajaIni = G.caja;
@@ -173,7 +210,8 @@ function cobrarCaja(dt) {
     const o = posCajaArriba();
     G.caja -= a;
     const k = VIVO.cajaIni ? 1 - G.caja / VIVO.cajaIni : 0;
-    volar(B.BILLETE, -0.55, o, () => [JUG.x, JUG.y + 1.4, JUG.z], 0.32, 1.2, () => { G.dinero += a; G.ganado += a; UI.pulsoPlata(); Sonido.efecto('moneda', 0.45, 0.9 + k * 0.5, 0.025); });
+    const lejos = Math.hypot(JUG.x - c[0], JUG.z - c[1]);
+    volar(B.BILLETE, -0.55, o, () => [JUG.x, JUG.y + 1.4, JUG.z], 0.32 + lejos * 0.04, 1.2 + lejos * 0.15, () => { G.dinero += a; G.ganado += a; mision('cobrar', a); UI.pulsoPlata(); Sonido.efecto('moneda', 0.45, 0.9 + k * 0.5, 0.025); });
   }
   if (G.caja <= 0) { Sonido.efecto('caja', 0.7); Sonido.vibrar(25); }
 }
@@ -216,7 +254,7 @@ function pagarPads(dt) {
   }
 }
 function usarPad(p) {
-  Sonido.efecto('desbloquear', 0.9); Sonido.vibrar([20, 20, 40]);
+  Sonido.efecto('desbloquear', 0.9); Sonido.vibrar([20, 20, 40]); mision('mejora', 1);
   for (let k = 0; k < 40; k++) confeti(p.x + rnd(-1, 1), SUELO + 0.5, p.z + rnd(-1, 1));
   if (p.m) {
     if (!G.gens[p.m]) {
@@ -257,7 +295,7 @@ function desatascar(p) {
   }
 }
 function moverJugador(dt, ix, iz) {
-  const v = ECO.vel.v[G.vel], k = 1 - Math.exp(-dt * 14);
+  const v = ECO.vel.v[G.vel] * multVel(), k = 1 - Math.exp(-dt * 14);
   JUG.vx += (ix * v - JUG.vx) * k; JUG.vz += (iz * v - JUG.vz) * k;
   moverConChoque(JUG, JUG.vx * dt, JUG.vz * dt, 0.3);
   const sp = Math.hypot(JUG.vx, JUG.vz);
@@ -298,6 +336,7 @@ function interacciones(dt) {
   } else JUG.tObra = 0;
   cobrarCaja(dt);
   pagarPads(dt);
+  if (G.parte >= 1) padsActividad(dt);
 }
 
 // ---------- caminos (A* sobre la grilla de paso) ----------
@@ -420,7 +459,8 @@ function actualizarVisitas(dt) {
     if (VIVO.visitaT <= 0) {
       const e = ECO.visita(G.parte); VIVO.visitaT = e.cada * azR(0.8, 1.2);
       if (VIS.length < 9) {
-        const v = { x: 24 + azR(-0.6, 0.6), z: 70.4, y: SUELO, yaw: PI, estado: 'llega', t: 0, fase: 0, andar: 0, sem: az() * 9, piel: PIELES['visitante' + (1 + Math.floor(az() * 6))], paga: e.paga, camino: null, ci: 0 };
+        const vip = G.parte >= 2 && az() < 0.1;
+        const v = { x: 24 + azR(-0.6, 0.6), z: 70.4, y: SUELO, yaw: PI, estado: 'llega', t: 0, fase: 0, andar: 0, sem: az() * 9, vip, piel: vip ? PIELES.vip : PIELES['visitante' + (1 + Math.floor(az() * 6))], paga: Math.round(e.paga * multPaga() * (vip ? 5 : 1)), camino: null, ci: 0 };
         let mx = 20 + az() * 8, mz = 32.6 + az() * 1.4; ir(v, mx, mz); VIS.push(v);
       }
     }
@@ -435,7 +475,8 @@ function actualizarVisitas(dt) {
       if (v.t <= 0) { v.mirarAbajo = 0; v.estado = 'paga'; const c = LUGAR.caja; ir(v, c[0] + 1.9, c[1] + 0.6 + az() * 0.8); }
     } else if (v.estado === 'paga') {
       if (seguir(v, dt, 2.6)) {
-        G.caja += v.paga; VIVO.cajaVol += v.paga; G.visitas++;
+        G.caja += v.paga; VIVO.cajaVol += v.paga; G.visitas++; mision('visitas', 1);
+        if (v.vip) { for (let k = 0; k < 16; k++) chispas(v.x, v.y + 1.5, v.z, '#ffd34a', 1, 2.5); UI.aviso('VIP +$' + fmt(v.paga), 'oro'); }
         const pg = v.paga;
         volar(B.BILLETE, -0.5, [v.x, v.y + 1.3, v.z], () => posCajaArriba(), 0.45, 1.2, () => { VIVO.cajaVol -= pg; });
         v.estado = 'vuelve'; v.festejo = 0.6; ir(v, 24 + azR(-0.6, 0.6), 70.6);
@@ -507,6 +548,10 @@ function actualizarJuego(dt, ix, iz) {
   armarMaquinas(dt);
   for (const a of AYUD) actualizarAyudante(a, dt);
   actualizarVisitas(dt);
+  for (const k in G.boosts) if (G.boosts[k] > 0) G.boosts[k] = Math.max(0, G.boosts[k] - dt);
+  actualizarMascota(dt);
+  actualizarCofres(dt);
+  for (const v of VIS) if (v.vip && vis() < dt * 6) chispas(v.x, v.y + 1.2, v.z, '#ffe27a', 1, 0.8);
   actualizarVuelos();
   actualizarParticulas(dt);
   // humo de las máquinas y de las chimeneas

@@ -57,13 +57,15 @@ function armarPieles() {
       if (y < 2) return ruido(pelo, 0.2);
       if (y === 2) return x === 0 || x === 7 ? pelo : piel;
       if (y === 3) return (x === 1 || x === 2 || x === 5 || x === 6) ? mezcla(pelo, '#000000', 0.2) : piel;
+      if (o.parche && (y === 3 || (y === 4 && (x === 1 || x === 2)))) return '#111111';
       if (y === 4) { if (o.lentes) return x >= 1 && x <= 6 ? (x === 3 || x === 4 ? '#222222' : '#111111') : piel; return x === 1 || x === 6 ? '#ffffff' : x === 2 || x === 5 ? o.ojos || '#3a2a1a' : piel; }
       if (y === 5) return x === 3 || x === 4 ? mezcla(piel, '#000000', 0.14) : piel;
       if (y === 6) return x >= 3 && x <= 4 ? '#7a3a2a' : (o.barba ? mezcla(pelo, piel, 0.3) : piel);
       return o.barba ? mezcla(pelo, piel, 0.2) : piel;
     });
     // casco, gorra o sombrero (capa de arriba, con transparencia)
-    if (o.gorro) parte(2, (cara, x, y, w, h) => {
+    if (o.gorro && o.gorro.f) parte(2, o.gorro.f);
+    else if (o.gorro) parte(2, (cara, x, y, w, h) => {
       const c = o.gorro.c, c2 = mezcla(c, '#000000', 0.22), c3 = mezcla(c, '#ffffff', 0.3);
       if (cara === 2) return x === 0 || x === w - 1 || y === 0 || y === h - 1 ? c2 : (o.gorro.tipo === 'casco' && (x === 3 || x === 4) ? c3 : c);
       if (cara === 3) return null;
@@ -90,6 +92,7 @@ function armarPieles() {
       if (cara === 3) return mezcla(o.zapato, '#000000', 0.3);
       if (y >= 9) return y === 11 ? mezcla(o.zapato, '#000000', 0.25) : o.zapato;
       if (o.corto && y >= 4) return o.piel;
+      if (o.pantalonF) { const pc = o.pantalonF(cara, x, y); if (pc) return pc; }
       const c = (cara === 0 || cara === 1) && x === 1 ? mezcla(o.pantalon, '#000000', 0.15) : o.pantalon;
       return ruido(c, 0.18);
     });
@@ -132,6 +135,36 @@ function armarPieles() {
       cuerpo: (cara, x, y) => (raya && y % 3 === 0 ? mezcla(cam, '#ffffff', 0.45) : (cara === 4 && y < 2 && x > 2 && x < 5 ? mezcla(cam, '#000000', 0.2) : cam)),
     }]);
   }
+  // ---------- los trajes de la tienda ----------
+  const T1 = tonos[1], T0 = tonos[0], T2 = tonos[2];
+  defs.push(['granjero', { semilla: 21, piel: T1, pelo: '#6b4423', gorro: { c: '#e3c060', tipo: 'sombrero' }, camisa: '#c0392b', manga: '#c0392b', largoManga: 6, pantalon: '#3a5aa6', zapato: '#5a3418',
+    cuerpo: (cara, x, y) => ((cara === 4 || cara === 5) && y >= 4 && x >= 1 && x <= 6) || ((cara === 4 || cara === 5) && y < 4 && (x === 1 || x === 6)) ? '#3a5aa6' : (((x >> 1) + (y >> 1)) % 2 ? '#c0392b' : '#7b1d14') }]);
+  defs.push(['chef', { semilla: 22, piel: T0, pelo: '#3a2414', camisa: '#f4f4f4', manga: '#f4f4f4', largoManga: 7, pantalon: '#222', zapato: '#1a1a1a',
+    gorro: { f: (cara, x, y) => cara === 3 ? null : cara === 2 ? (x === 0 || x === 7 || y === 0 || y === 7 ? '#d8d8d8' : '#ffffff') : (y < 3 ? (y === 2 ? '#d8d8d8' : '#ffffff') : null) },
+    pantalonF: (cara, x, y) => ((x + y) % 2 ? '#f0f0f0' : '#222222'),
+    cuerpo: (cara, x, y) => (cara === 4 && (x === 2 || x === 5) && y % 3 === 2 ? '#bfbfbf' : (y === 11 ? '#d8d8d8' : '#f4f4f4')) }]);
+  defs.push(['vaquero', { semilla: 23, piel: T2, pelo: '#3a2414', barba: true, gorro: { c: '#7a4a24', tipo: 'sombrero' }, camisa: '#f0e8d8', manga: '#f0e8d8', largoManga: 6, pantalon: '#35539a', zapato: '#5a3418',
+    cuerpo: (cara, x, y) => (y < 2 ? '#c0392b' : (cara === 4 || cara === 5) && (x <= 2 || x >= 5) ? '#7a4a24' : (y === 10 ? '#3a2414' : '#f0e8d8')) }]);
+  defs.push(['surfista', { semilla: 24, piel: T1, pelo: '#e3c060', lentes: true, camisa: '#ff8a3d', manga: '#ff8a3d', largoManga: 3, corto: true, pantalon: '#3a9ad9', zapato: T1,
+    cuerpo: (cara, x, y) => ((x * 3 + y * 5) % 7 === 0 ? '#ffe066' : (x * 5 + y * 3) % 11 === 0 ? '#ffffff' : '#ff8a3d') }]);
+  defs.push(['pirata', { semilla: 25, piel: T1, pelo: '#1f1a17', barba: true, parche: true, camisa: '#f4f4f4', manga: '#f4f4f4', largoManga: 6, pantalon: '#2a2a30', zapato: '#1a1a1a',
+    gorro: { f: (cara, x, y) => cara === 3 ? null : cara === 2 ? '#c0392b' : (y < 3 ? ((x + y) % 3 === 0 ? '#ffffff' : '#c0392b') : (cara === 5 && y < 5 && (x === 3 || x === 4) ? '#a02a20' : null)) },
+    cuerpo: (cara, x, y) => (y === 10 ? '#3a2414' : y % 2 ? '#c0392b' : '#f4f4f4') }]);
+  defs.push(['ninja', { semilla: 26, piel: T1, pelo: '#1f1a17', camisa: '#1f1f24', manga: '#1f1f24', largoManga: 12, guante: '#1f1f24', pantalon: '#1f1f24', zapato: '#141418',
+    gorro: { f: (cara, x, y) => cara === 3 ? null : (cara === 4 && (y === 3 || y === 4)) ? null : (cara === 5 && y > 4 && x === 3 ? '#c0392b' : '#1f1f24') },
+    cuerpo: (cara, x, y) => (y === 7 || y === 8 ? '#c0392b' : '#1f1f24') }]);
+  defs.push(['astronauta', { semilla: 27, piel: T0, pelo: '#6b4423', camisa: '#f2f2f2', manga: '#f2f2f2', largoManga: 10, guante: '#cfd6de', pantalon: '#f2f2f2', zapato: '#8a929c',
+    gorro: { f: (cara, x, y) => cara === 3 ? null : (cara === 4 && x >= 1 && x <= 6 && y >= 1 && y <= 6) ? (x === 2 && y === 2 ? '#e0f6ff' : (y < 3 ? '#8fd0f4' : '#5aa8de')) : (y === 7 ? '#c8ccd2' : '#f2f2f2') },
+    cuerpo: (cara, x, y) => (cara === 4 && x >= 2 && x <= 5 && y >= 2 && y <= 5 ? (y === 2 && x === 5 ? '#d23a2a' : y === 2 && x === 4 ? '#2a5ad2' : '#c8ccd2') : (y === 9 ? '#8a929c' : '#f2f2f2')) }]);
+  defs.push(['heroe', { semilla: 28, piel: T1, pelo: '#1f1a17', camisa: '#2f5fd0', manga: '#2f5fd0', largoManga: 10, guante: '#d23a2a', pantalon: '#2f5fd0', zapato: '#d23a2a',
+    gorro: { f: (cara, x, y) => (cara === 4 && (y === 3 || y === 4) && !(y === 4 && (x === 1 || x === 2 || x === 5 || x === 6))) ? '#1a1a1a' : null },
+    pantalonF: (cara, x, y) => (y < 3 ? '#d23a2a' : null),
+    cuerpo: (cara, x, y) => (y === 7 ? '#ffd23f' : cara === 4 && ((y === 2 && (x === 3 || x === 4)) || (y === 3 && x >= 2 && x <= 5) || (y === 4 && (x === 3 || x === 4))) ? '#ffd23f' : '#2f5fd0') }]);
+  defs.push(['rey', { semilla: 29, piel: T0, pelo: '#d8d0c0', barba: true, camisa: '#a8202c', manga: '#a8202c', largoManga: 8, pantalon: '#5a2a7a', zapato: '#3a1a10',
+    gorro: { f: (cara, x, y) => cara === 2 || cara === 3 ? null : (y < 2 ? (y === 1 && x % 3 === 1 ? (x % 2 ? '#d23a2a' : '#2a7ad2') : (y === 0 && x % 2 === 1 ? null : '#f2c230')) : y === 2 ? '#d9a420' : null) },
+    cuerpo: (cara, x, y) => (y < 2 ? ((x + y) % 3 === 0 ? '#222222' : '#f4f4f4') : y === 7 ? '#f2c230' : '#a8202c') }]);
+  defs.push(['vip', { semilla: 30, piel: T2, pelo: '#1f1a17', lentes: true, camisa: '#e8b830', manga: '#e8b830', largoManga: 9, pantalon: '#d8a820', zapato: '#1a1a1a',
+    cuerpo: (cara, x, y) => (cara === 4 && (x === 3 || x === 4) ? (y < 6 && x === 3 ? '#1a1a1a' : '#ffffff') : '#e8b830') }]);
   const datos = new Uint8Array(64 * 64 * 4 * defs.length);
   defs.forEach(([nom, o], i) => { datos.set(pintar(o), i * 64 * 64 * 4); PIELES[nom] = i; });
   PJ.nPieles = defs.length; PJ.datos = datos;

@@ -80,6 +80,12 @@ const TEX = { nombres: [], capa: {}, datos: null, color: {} };
   def('piedra_musgo', (x, y, r) => { const c = manchas(['#7b7b7f', '#86868a', '#919195'], 4, 8, 0.35, 181)(x, y, r); return ruidoT(x, y, 4, 182) > 0.62 ? [elegir(['#4f7d2e', '#5f8f36', '#6b9c3e'], r()), 255] : c; });
   def('cristal_azul', (x, y, r) => { if (x === 0 || y === 0 || x === N - 1 || y === N - 1) return ['#2f3f55', 255]; if (x + y === 6 || x + y === 7) return ['#ffffff', 150]; return ['#7ab8e8', 120]; });
   def('lana_amarilla', lana('#e8c330', 191));
+  def('lana_marron', lana('#8a5a34', 192));
+  def('lana_rosa', lana('#f08ab0', 193));
+  def('lana_gris', lana('#8a8e96', 194));
+  def('lana_naranja', lana('#e8822a', 195));
+  def('lana_celeste', lana('#6cc4f0', 196));
+  def('lana_violeta', lana('#8a52c8', 197));
   def('tejado_rojo', (x, y, r) => { const fila = y >> 2, yy = y & 3, xx = (x + (fila % 2 ? 2 : 0)) % 4; if (yy === 3) return ['#6a2219', 255]; if (xx === 3 && yy > 0) return ['#7d2a1f', 255]; if (yy === 0) return ['#d0644a', 255]; return [elegir(['#a63c2c', '#b04332', '#ba4b38'], r()), 255]; });
 
   const n = defs.length, datos = new Uint8Array(N * N * 4 * n);

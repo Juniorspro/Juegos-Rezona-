@@ -1,0 +1,9 @@
+{
+  "appid": "PONER_APPID_DE_TIKTOK",
+  "projectname": "mansion-builder",
+  "compileType": "game",
+  "setting": {
+    "es6": true,
+    "minified": true
+  }
+}

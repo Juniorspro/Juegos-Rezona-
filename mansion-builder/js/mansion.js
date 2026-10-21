@@ -123,6 +123,22 @@ const PARTES = [
     p(16, 11, 28, B.ORO); p(31, 11, 28, B.ORO);
   } },
 ];
+// cuánto pide de verdad una parte: las del final piden más, y cada mansión nueva (estrella) un 25% más
+function necesita(i, m) { const P = PARTES[i]; if (!P || !P.need[m]) return 0; return Math.round(P.need[m] * (i >= 8 ? 1.6 : i >= 4 ? 1.3 : 1) * (1 + 0.25 * (G.estrellas || 0))); }
+// los estilos de cada mansión nueva: mismos materiales, otros bloques
+const ESTILOS = [
+  {},
+  { LADRILLOS: 'TERRACOTA', PIZARRA: 'TEJADO_ROJO', LOSA_PIZARRA: 'LOSA_TEJADO', TRONCO_OSC: 'TRONCO', VIDRIO: 'CRISTAL_AZUL' },
+  { LADRILLOS: 'HORM_NEGRO', PIZARRA: 'LISO', LOSA_PIZARRA: 'LOSA_LISO', TRONCO_OSC: 'TABLAS_OSC', CUARZO_LADRILLO: 'CUARZO', VIDRIO: 'CRISTAL_AZUL', PILAR: 'CUARZO' },
+  { LADRILLOS: 'ADOQUIN', PIZARRA: 'TEJADO_ROJO', LOSA_PIZARRA: 'LOSA_TEJADO', CUARZO: 'CUARZO_LADRILLO', TABLAS_OSC: 'TABLAS' },
+];
+const _estilo = [];
+function bloqueEstilo(b) {
+  const e = ESTILOS[(G.estrellas || 0) % ESTILOS.length];
+  if (!_estilo[b]) _estilo[b] = {};
+  const nom = BLOQ[b].nom; return e[nom] ? B[e[nom]] : b;
+}
+function listaParte(i) { return listaDe(PARTES[i].arma).map(v => [v[0], v[1], v[2], bloqueEstilo(v[3])]); }
 // ---------- las máquinas de cada material (se arman al desbloquearlas) ----------
 // salida: de dónde sale cada bloque nuevo; humo: dónde echan partículas
 const MAQUINAS = {

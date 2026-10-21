@@ -9,7 +9,7 @@ function redimensionar() {
   CSSW = Math.max(200, window.innerWidth || 360); CSSH = Math.max(200, window.innerHeight || 640); DPR = window.devicePixelRatio || 1;
   W = CSSW; H = CSSH;
   UI.U = clamp(Math.min(CSSW, CSSH) / 360, 0.8, 1.7);
-  DPRui = Math.min(DPR, 2.5);
+  DPRui = Math.min(DPR, window.__uiDPR || 2.5);
   cvUI.width = Math.round(CSSW * DPRui); cvUI.height = Math.round(CSSH * DPRui); cvUI.style.width = CSSW + 'px'; cvUI.style.height = CSSH + 'px';
   if (R.cv) R.tamano(CSSW, CSSH, DPR);
   if (PRINCIPAL.escena === 'intro' && PRINCIPAL.intro) { const t = PRINCIPAL.intro.t; crearIntro(); PRINCIPAL.intro.t = t; }
@@ -41,7 +41,7 @@ function correrPasos(presupuesto) {
   const P = PRINCIPAL.pasos, t0 = performance.now();
   while (PRINCIPAL.pasoI < P.length && performance.now() - t0 < presupuesto) { P[PRINCIPAL.pasoI++](); }
   PRINCIPAL.prog = PRINCIPAL.pasoI / P.length;
-  if (PRINCIPAL.pasoI >= P.length && !PRINCIPAL.listo) { PRINCIPAL.listo = true; if (PRUEBA) empezarJuego(); }
+  if (PRINCIPAL.pasoI >= P.length && !PRINCIPAL.listo) { PRINCIPAL.listo = true; if (PRUEBA && !PARAM.has('carga')) empezarJuego(); }
 }
 // lo que dejaron los visitantes mientras no estabas (un tercio de lo normal, hasta 3 horas)
 function offline() {
@@ -57,7 +57,7 @@ function empezarJuego() {
   CAM.x = JUG.x; CAM.z = JUG.z; CAM.intro = PRUEBA ? 0 : 2.6;
   Sonido.musica(true);
   if (PRINCIPAL.offline > 0 && !PRUEBA) abrirPanel('volviste');
-  else if (G.diario !== hoy() && PRINCIPAL.habia && !PRUEBA) setTimeout(() => { if (!UI.panel) abrirPanel('diario'); }, 3000);
+  else if (calendarioListo() && PRINCIPAL.habia && !PRUEBA) setTimeout(() => { if (!UI.panel) { ACT.pestana = 'calendario'; abrirPanel('actividades'); } }, 3000);
 }
 function borrarTodo() {
   Guardado.borrar('estado');
@@ -84,8 +84,10 @@ function bajar(e) {
   try { cvUI.setPointerCapture(e.pointerId); } catch (er) { }
   if (PRINCIPAL.escena === 'intro') { PRINCIPAL.intro.saltar(); if (PRINCIPAL.intro.listo && PRINCIPAL.musIntro) PRINCIPAL.musIntro.cortar(); if (!PRINCIPAL.musIntro && Sonido.ok() && PRINCIPAL.intro.t < 1) PRINCIPAL.musIntro = IntroJXS.jingle(Sonido.ctx, Sonido.master, ESTILO_MANSION); return; }
   if (PRINCIPAL.escena === 'carga') { if (PRINCIPAL.listo) { Sonido.efecto('clic', 0.7); empezarJuego(); } return; }
+  if (Anuncios.ocupado) return;
   const b = tocarUI(x, y);
   if (b) { TOQUES[e.pointerId] = { b }; return; }
+  if (UI.panel === 'mj') { tocarMJ(x, y); return; }
   if (UI.panel) return;
   const J = UI.joy;
   if (!J.activo) {
@@ -147,7 +149,11 @@ function adaptar(real) {
   }
 }
 function actualizar(dt) {
-  if (PRINCIPAL.escena !== 'juego' || UI.panel) return;
+  if (PRINCIPAL.escena !== 'juego') return;
+  Anuncios.pasar(dt); pasarRuleta(dt);
+  if (UI.panel === 'mj') pasarMJ(dt);
+  if (BOT.activo && UI.panel && UI.panel !== 'mj') { if (UI.panel === 'premio') cobrarPremio(1); else UI.panel = null; }
+  if (UI.panel || Anuncios.ocupado) return;
   const [ix, iz] = BOT.activo ? botEntrada(dt) : entradaMundo();
   actualizarJuego(dt, ix, iz);
   UI.pasar(dt);
@@ -159,21 +165,26 @@ function cuadro(ts) {
     const real = PRINCIPAL.ultimo ? Math.max(0, (ts - PRINCIPAL.ultimo) / 1000) : 1 / 60;
     PRINCIPAL.ultimo = ts;
     const dt = Math.min(0.05, real);
-    if (GL.perdido) return;
+    if (GL.perdido || PRINCIPAL.congelado) return;
     const g = gUI; g.setTransform(DPRui, 0, 0, DPRui, 0, 0);
     const esc = PRINCIPAL.escena;
+    // en TikTok Minis la interfaz es un lienzo aparte y se compone encima del 3D al final del cuadro
+    const componer = hizo3D => { if (window.__componer) window.__componer(hizo3D); };
     if (esc === 'intro' || esc === 'carga') {
       if (!PRINCIPAL.listo) correrPasos(esc === 'intro' ? 10 : 14);
       if (esc === 'intro') {
         const I = PRINCIPAL.intro; I.pasar(dt); g.clearRect(0, 0, CSSW, CSSH); I.dibujar(g);
         if (I.listo) PRINCIPAL.escena = 'carga';
       } else dibujarCarga(g, dt, PRINCIPAL.prog, PRINCIPAL.listo);
-      return;
+      return componer(false);
     }
     actualizar(dt);
+    if (Anuncios.prueba) { g.clearRect(0, 0, CSSW, CSSH); Anuncios.dibujar(g); return componer(false); }
+    if (UI.panel === 'mj') { UI.botones.length = 0; g.clearRect(0, 0, CSSW, CSSH); dibujarMJ(g, PRINCIPAL.reloj = (PRINCIPAL.reloj || 0) + dt); return componer(false); }
     camaraJuego(dt);
     dibujarCuadro(VIVO.t);
     dibujarUI(g, dt, VIVO.t);
+    componer(true);
     adaptar(real);
   } catch (e) { mostrarError(e); }
 }
@@ -212,16 +223,22 @@ function arrancar() {
 window.__juego = {
   get bot() { return BOT.activo; }, set bot(v) { BOT.activo = !!v; },
   estado: () => ({ escena: PRINCIPAL.escena, listo: PRINCIPAL.listo, dinero: G.dinero, caja: G.caja, parte: G.parte, entregado: Object.assign({}, G.entregado), gens: JSON.parse(JSON.stringify(G.gens)), ayud: G.ayud, mochila: G.mochila, vel: G.vel, visitas: G.visitas, bloques: G.bloques, obj: VIVO.obj && VIVO.obj.tipo, t: Math.round(G.jugado), fps: Math.round(PRINCIPAL.fps), calidad: R.calidad, idioma: IDIOMA, carga: JUG.carga.length, vis: VIS.length, pos: [+JUG.x.toFixed(2), +JUG.z.toFixed(2)] }),
-  paso(n, dib) { for (let i = 0; i < n; i++) { actualizar(1 / 30); camaraJuego(1 / 30); } if (dib) { dibujarCuadro(VIVO.t); gUI.setTransform(DPRui, 0, 0, DPRui, 0, 0); dibujarUI(gUI, 1 / 30, VIVO.t); } },
+  paso(n, dib) { for (let i = 0; i < n; i++) { actualizar(1 / 30); camaraJuego(1 / 30); } if (dib) { R.actualizarTrozos(99); R.sombraSucia = true; R.ultimaSombra = -1; dibujarCuadro(VIVO.t); gUI.setTransform(DPRui, 0, 0, DPRui, 0, 0); dibujarUI(gUI, 1 / 30, VIVO.t); } },
   empezar: () => empezarJuego(),
   dar: n => { G.dinero += n; },
-  completar(k) { while (G.parte < Math.min(k, PARTES.length)) { const P = PARTES[G.parte]; for (const m in P.need) { G.entregado[m] = P.need[m]; } colocar(listaDe(P.arma), false); for (const m in P.need) OBRA.aterrizado[m] = P.need[m]; completarParte(); } for (const m of MATERIALES) if (PRIMERA[m] < G.parte + 1 && !G.gens[m]) { G.gens[m] = { nivel: 1, pila: 6 }; VIVO.gen[m] = { t: 0, enCamino: 0 }; colocar(listaDe(MAQUINAS[m].arma), false); } },
+  completar(k) { while (G.parte < Math.min(k, PARTES.length)) { const P = PARTES[G.parte]; for (const m in P.need) { G.entregado[m] = necesita(G.parte, m); } colocar(listaParte(G.parte), false); for (const m in P.need) OBRA.aterrizado[m] = necesita(G.parte, m); completarParte(); } for (const m of MATERIALES) if (PRIMERA[m] < G.parte + 1 && !G.gens[m]) { G.gens[m] = { nivel: 1, pila: 6 }; VIVO.gen[m] = { t: 0, enCamino: 0 }; colocar(listaDe(MAQUINAS[m].arma), false); } },
   calidad(n) { AJ.calidad = n; ponerCalidadAjuste(); },
   idioma(l) { AJ.idioma = l; aplicarIdioma(); },
   panel(p) { if (p) abrirPanel(p); else UI.panel = null; },
   ir(x, z) { JUG.x = x; JUG.z = z; CAM.x = x; CAM.z = z; },
   camara(o) { Object.assign(CAM, o); },
   borrar: () => borrarTodo(),
+  renovar: () => renovarMansion(),
+  congelar(v) { PRINCIPAL.congelado = v !== false; },
+  gemas: n => { G.gemas += n; },
+  mj: t => abrirMinijuego(t, null),
+  tocar(x, y) { const b = tocarUI(x, y); if (b) b.f(); else if (UI.panel === 'mj') tocarMJ(x, y); return !!b; },
+  dibujarMJ() { gUI.setTransform(DPRui, 0, 0, DPRui, 0, 0); UI.botones.length = 0; gUI.clearRect(0, 0, CSSW, CSSH); dibujarMJ(gUI, 1); },
   medir(n) { const t0 = performance.now(); for (let i = 0; i < n; i++) { dibujarCuadro(VIVO.t); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); } return (performance.now() - t0) / n; },
   stats: () => Object.assign({}, R.stats, { w: R.w, h: R.h, part: PT.n }),
   ev(s) { return PRUEBA ? eval(s) : undefined; },

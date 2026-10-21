@@ -34,17 +34,29 @@ function nubePixel(g, x, y, s) {
   for (const [a, b, w, h] of [[0, 1, 6, 2], [1, 0, 3, 1], [4, 0, 1, 1], [-1, 2, 8, 1]]) g.fillRect(x + a * s, y + b * s, w * s, h * s);
   g.fillStyle = 'rgba(200,225,245,0.9)'; g.fillRect(x - s, y + 3 * s, 8 * s, s * 0.7);
 }
-// el constructor de frente, pintado con su piel (saluda con el brazo)
-function constructor2D(g, x, y, px, t) {
-  const piel = pielLienzo(); g.imageSmoothingEnabled = false;
+// el constructor de frente, pintado con su piel: saluda con el brazo derecho (que sale de atrás del hombro y se
+// mueve de lado a lado), respira y parpadea
+function constructor2D(g, x, y, px, t, piel) {
+  piel = piel || pielLienzo(); g.imageSmoothingEnabled = false;
   const d = (u, v, w, h, X, Y) => g.drawImage(piel, u, v, w, h, x + X * px, y + Y * px, w * px, h * px);
   g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(x + 4 * px, y + 32 * px, 7 * px, 1.6 * px, 0, 0, TAU); g.fill();
-  const bob = Math.round(Math.sin(t * 3) * 0.6);
-  d(4, 20, 4, 12, 0, 20); d(20, 52, 4, 12, 4, 20);
-  d(20, 20, 8, 12, 0, 8 + bob * 0.2);
-  d(36, 52, 4, 12, 8, 8 + bob * 0.2);
-  g.save(); g.translate(x - 2 * px, y + 9 * px); g.rotate(-2.4 + Math.sin(t * 7) * 0.35); g.drawImage(piel, 44, 20, 4, 12, -2 * px, -1 * px, 4 * px, 12 * px); g.restore();
-  d(8, 8, 8, 8, 0, bob * 0.2); d(40, 8, 8, 8, 0, bob * 0.2);
+  const resp = Math.sin(t * 2.2) * 0.35;                               // el cuerpo y la cabeza suben y bajan un poco
+  d(4, 20, 4, 12, 0, 20); d(20, 52, 4, 12, 4, 20);                    // piernas
+  // brazo que saluda: pivote en el hombro (borde izquierdo del cuerpo), apunta arriba-afuera y va y viene
+  const ang = 2.55 + Math.sin(t * 7.5) * 0.38;
+  g.save(); g.translate(x - 2 * px, y + (9 + resp) * px); g.rotate(ang);
+  g.drawImage(piel, 44, 20, 4, 12, -2 * px, -1.2 * px, 4 * px, 12 * px);
+  g.restore();
+  d(20, 20, 8, 12, 0, 8 + resp);                                       // cuerpo (tapa el hombro del brazo)
+  g.save(); g.translate(x + 10 * px, y + (9 + resp) * px); g.rotate(-0.08 + Math.sin(t * 2.2) * 0.04);
+  g.drawImage(piel, 36, 52, 4, 12, -2 * px, -1 * px, 4 * px, 12 * px); // el otro brazo, colgando
+  g.restore();
+  d(8, 8, 8, 8, 0, resp); d(40, 8, 8, 8, 0, resp);                     // cabeza y casco
+  if ((t % 3.4) < 0.13) {                                              // parpadeo
+    const c = piel.getContext('2d').getImageData(8 + 3, 8 + 5, 1, 1).data;
+    g.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+    g.fillRect(x + 1 * px, y + (4 + resp) * px, 2 * px, px); g.fillRect(x + 5 * px, y + (4 + resp) * px, 2 * px, px);
+  }
   g.imageSmoothingEnabled = true;
 }
 // la casita que se arma con el progreso (bloques isométricos)

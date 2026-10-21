@@ -24,3 +24,29 @@ const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 const salida = html.replace('/*CSS*/', () => css).replace('<!--JS-->', () => '<script>' + cuerpo.replace(/<\/script/gi, '<\\/script') + '</script>');
 fs.writeFileSync(path.join(dir, cfg.salida), salida);
 console.log(cfg.salida, (salida.length / 1024).toFixed(1) + ' KB');
+// --tiktok: el paquete para el runtime nativo de TikTok Minis (game.js + game.json + project.config.json + audio + letra)
+if (process.argv.includes('--tiktok')) {
+  const sal = path.join(dir, 'tiktok'), nombres = audios.map(f => f.replace('.mp3', ''));
+  fs.rmSync(sal, { recursive: true, force: true }); fs.mkdirSync(path.join(sal, 'audio'), { recursive: true }); fs.mkdirSync(path.join(sal, 'fuente'), { recursive: true });
+  const adapt = fs.readFileSync(path.join(dir, 'plataformas/tiktok.js'), 'utf8').replace('/*AUDIOS*/', JSON.stringify(nombres));
+  let jsT = 'const AUDIO_DATOS = {};\n';
+  for (const f of cfg.js) jsT += fs.readFileSync(path.join(dir, f), 'utf8') + '\n';
+  const cuerpoT = "(function(){'use strict';\n" + adapt + '\n' + jsT + '})();\n';
+  try { new vm.Script(cuerpoT, { filename: 'game.js' }); } catch (e) { console.error('ERROR de sintaxis (tiktok)', e.message); process.exit(1); }
+  fs.writeFileSync(path.join(sal, 'game.js'), cuerpoT);
+  fs.writeFileSync(path.join(sal, 'game.json'), JSON.stringify({ deviceOrientation: 'portrait', showStatusBar: false, networkTimeout: { request: 5000 } }, null, 2) + '\n');
+  fs.writeFileSync(path.join(sal, 'project.config.json'), JSON.stringify({ appid: 'PONER_APPID_DE_TIKTOK', projectname: 'mansion-builder', compileType: 'game', setting: { es6: true, minified: true } }, null, 2) + '\n');
+  for (const f of audios) fs.copyFileSync(path.join(dir, 'audio', f), path.join(sal, 'audio', f));
+  fs.copyFileSync(path.join(dir, 'fuente', 'bungee.ttf'), path.join(sal, 'fuente', 'bungee.ttf'));
+  fs.writeFileSync(path.join(sal, 'LEEME.md'), [
+    '# MANSION BUILDER para TikTok Minis (runtime nativo)', '',
+    'Desde el 28/8/2026 TikTok no acepta juegos HTML: este paquete corre en el runtime nativo (game.js, sin DOM).', '',
+    '1. En `project.config.json` poné el **appid** de tu Mini Game.',
+    '2. Creá un anuncio con premio (In-App Ads) en el Developer Portal y poné su id en `js/anuncios.js` (`ANUNCIO_ID.tiktok`); después `node mansion-builder/armar.mjs --tiktok`. (O buscá `PONER_ID_DEL_ANUNCIO_CON_PREMIO` en `game.js` y reemplazalo.)',
+    '3. Para que el idioma salga por la IP, agregá a los dominios permitidos: `https://api.country.is`, `https://ipwho.is`, `https://get.geojs.io`. Si no, usa el idioma de TikTok.',
+    '4. Abrilo con la TikTok DevTool y probalo en un celular de verdad: necesita WebGL2. Se probó solo en un TikTok simulado en Chromium.', '',
+    'Pesa ~1,1 MB (el paquete principal admite 4 MB).', '',
+  ].join('\n'));
+  let tot = 0; const sumar = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const q = path.join(d, e.name); if (e.isDirectory()) sumar(q); else tot += fs.statSync(q).size; } }; sumar(sal);
+  console.log('tiktok/ listo:', (tot / 1024).toFixed(0) + ' KB (el paquete principal puede tener hasta 4 MB)');
+}

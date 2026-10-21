@@ -178,6 +178,9 @@ void main() {
     o = borde > 0.5 ? vec4(cb, 0.95) : vec4(1.0, 0.86, 0.3, pulso);
   } else if (k == 3) {
     o = borde > 0.5 ? vec4(0.96, 1.0, 0.9, 0.95) : vec4(0.25, 0.7, 0.3, 0.42 + 0.08 * sin(uT * 3.0));
+  } else if (k == 5) {
+    float on = step(0.5, fract((p.x - p.y) * 0.9 - uT * 0.4));
+    o = borde > 0.5 ? vec4(1.0, 1.0, 1.0, 0.95) : vec4(0.25, 0.55, 1.0, 0.36 + 0.14 * on + 0.06 * sin(uT * 3.0));
   } else {
     float r = length(vQ); float an = 1.0 - smoothstep(0.0, 0.08, abs(r - 0.86));
     o = vec4(1.0, 1.0, 1.0, an * (0.5 + 0.3 * sin(uT * 4.0 + vB.w)));

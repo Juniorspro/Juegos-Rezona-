@@ -81,17 +81,24 @@ No existen `motor2d/`, `herramientas/` ni los juegos de ejemplo citados en la gu
   `estado()`); `?portada`.
 - `mansion-builder/`: MANSION BUILDER, idle-arcade de levantar una mansión de bloques (estilo Minecraft) en una isla, vista
   3/4 de costado-arriba (WebGL2 propio: trozos 16×16 en una pasada con AO, sombra fija del sol, nubes, agua viva, vidrio,
-  calcas del piso, cubos e instancias, silueta del jugador tapado). Se juntan bloques de 5 máquinas (madera, piedra,
-  vidrio, mármol, oro) y se llevan a la obra; 13 partes se arman solas con bloques que vuelan; los visitantes pagan en la
-  caja; cuadros para desbloquear/mejorar (máquinas, mochila, zapatillas, 3 ayudantes con A*); premio diario, plata
-  offline, compartir. **4 idiomas (en/es/pt/vi) por el país de la IP, sin pantalla de idioma** (pedido del dueño; se
-  cambia en ajustes). Gráficos 0-3 según GPU y FPS. Música y efectos de Higgsfield (`sonilo_music`/`mirelo`, recortados
-  con ffmpeg) en `audio/`, letra Bungee en `fuente/`: `armar.mjs` los mete en base64. Balance en `ECO` (`js/mansion.js`).
-  `js/`: base, idiomas, gl, texturas, bloques, mundo, malla, render, personajes, mansion, sonido, juego, escena, ui,
-  carga, intro, principal. `node mansion-builder/armar.mjs` → `mansion-builder.html` (~1,1 MB). Prueba: `?prueba`
-  (`&intro`), `window.__juego` (`bot=true`, `paso(n,dib)`, `completar(k)`, `dar(n)`, `calidad(n)`, `idioma(l)`,
-  `panel(p)`, `ir(x,z)`, `camara(o)`, `borrar()`, `medir(n)`, `stats()`, `ev(s)` solo con `?prueba`). El bot la termina
-  en ~23 min de juego.
+  calcas del piso, cubos e instancias, silueta del jugador tapado). 5 máquinas → obra; 13 partes que se arman solas;
+  visitantes (y VIP) pagan en la caja; cuadros para desbloquear/mejorar; 3 ayudantes con A*. **Nueva mansión ★**
+  (`renovarMansion`, `ESTILOS`): se rehace con otro estilo, +50% de paga por estrella. Gemas; tienda (`js/tienda.js`: 10
+  trajes, 4 mascotas de cubitos con efecto, 8 decoraciones que se arman en la isla, boosts); actividades
+  (`js/actividades.js`: 3 misiones diarias, 16 logros, calendario de 7 días, ruleta, cofres en el mundo); minijuegos
+  (`js/minijuegos.js`: pesca en el muelle, torre de bloques, excavación; cebos/partidas por día). Anuncios con premio
+  (`js/anuncios.js`: TikTok `TTMinis.game.createRewardedVideoAd`, CrazyGames, Poki o uno de prueba de 3 s; topes por día
+  en `TOPES_AD`; `ANUNCIO_ID.tiktok` lo pone el dueño). **4 idiomas (en/es/pt/vi) por el país de la IP, sin pantalla de
+  idioma** (pedido del dueño; se cambia en ajustes). Gráficos 0-3 según GPU y FPS. Música y efectos de Higgsfield en
+  `audio/`, Bungee en `fuente/` (woff2 para el HTML, ttf para TikTok). `node mansion-builder/armar.mjs` →
+  `mansion-builder.html` (~1,25 MB); con `--tiktok` además `tiktok/` (runtime nativo: `plataformas/tiktok.js` hace de
+  navegador: lienzo WebGL2 + interfaz 2D compuesta como textura, toques, guardado, InnerAudio/WebAudio, Path2D; ~1,1 MB;
+  probado solo con un `tt` simulado). Prueba: `?prueba` (`&intro`, `&carga`), `window.__juego` (`bot=true`, `congelar()`,
+  `paso(n,dib)`, `completar(k)`, `renovar()`, `dar(n)`, `gemas(n)`, `mj(t)`, `tocar(x,y)`, `dibujarMJ()`, `calidad(n)`,
+  `idioma(l)`, `panel(p)`, `ir(x,z)`, `camara(o)`, `borrar()`, `medir(n)`, `stats()`, `ev(s)` solo con `?prueba`).
+  El bot termina la mansión en ~10 min de juego.
+- **TikTok Minis:** desde el 28/8/2026 no acepta juegos HTML (solo runtime nativo: `game.js`, `game.json`,
+  `project.config.json`; 4 MB el paquete principal). Para un juego nuestro, copiar el adaptador de `mansion-builder`.
 - `famatina/`: tycoon minero 2D en píxeles. Fuente en `js/` (base, idiomas, fuente, arte, eco, sonido, mundo, intro, ui, juego);
   `node famatina/armar.mjs` → `famatina.html` (un archivo, ~275 KB). Balance en `ECO` (`js/eco.js`). Prueba: `?prueba` y
   `window.__juego` (bot, `simular(seg)`, `medirAudio(seg)`, `abrir(panel)`); `?portada` arma la portada 9:16.

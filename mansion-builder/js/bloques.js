@@ -67,6 +67,12 @@ const BLOQ = [];
   def(55, 'LOSA_OSCURA', ['tablas_oscuras'], { l: true, m: 'madera' });
   def(56, 'LOSA_LISO', ['liso'], { l: true, m: 'piedra' });
   def(57, 'TRONCO_ACOSTADO', ['tronco_lado', 'tronco_lado', 'tronco_lado', 'tronco_arriba'], { m: 'madera' });
+  def(58, 'LANA_MARRON', ['lana_marron']);
+  def(59, 'LANA_ROSA', ['lana_rosa']);
+  def(60, 'LANA_GRIS', ['lana_gris']);
+  def(61, 'LANA_NARANJA', ['lana_naranja']);
+  def(62, 'LANA_CELESTE', ['lana_celeste']);
+  def(63, 'LANA_VIOLETA', ['lana_violeta']);
 })();
 // lo que se carga de cada material (el bloque que sale del generador)
 const MATERIALES = ['madera', 'piedra', 'vidrio', 'marmol', 'oro'];
